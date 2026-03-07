@@ -15,7 +15,7 @@ namespace online_course_recommendation_system.Controller
         {
             // sửa password của mọi người ở đây nha, nhớ là phải đúng với password của neo4j trên máy của mọi người
             // hoặc là mọi người đặt password cho instance trong NeO4J của mọi người là 12345678 thì khỏi phải sửa
-            _driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic("neo4j", "12345678"));
+            _driver = GraphDatabase.Driver("neo4j://127.0.0.1:7687", AuthTokens.Basic("neo4j", "12345678"));
         }
 
         [HttpGet("user-based/{userId}")]
@@ -24,7 +24,7 @@ namespace online_course_recommendation_system.Controller
             var recommendedCourses = new List<object>();
 
             // Mở phiên làm việc với Neo4j
-            await using var session = _driver.AsyncSession(o => o.WithDatabase("course"));
+            await using var session = _driver.AsyncSession(o => o.WithDatabase("neo4j"));
 
             // Chèn câu Cypher thuật toán vào đây
             var query = @"
