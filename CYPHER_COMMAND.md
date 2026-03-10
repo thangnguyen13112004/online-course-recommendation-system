@@ -66,5 +66,58 @@
 				// 5. CẬP NHẬT RATING
 				SET r.rating = toInteger(row.Rating)
 			```
-
+		
 ### 3. Access in Controller/RecommendationController.cs, change password or set up password on your NeO4J.
+
+#   4. Content-based
+        ### Bước 1: Xóa dữ liệu cũ (Cleanup)
+			```cypher
+				// 1. Tương ứng với hàm deleteContentSimilarRelationships
+				MATCH ()-[r:CONTENT_SIMILAR]-()
+				DELETE r;
+
+				// 2. Tương ứng với hàm deleteProjection
+				// Xóa projection có tên 'contentGraph' nếu nó đang tồn tại
+				CALL gds.graph.drop('contentGraph', false);
+			```
+		### Bước 2: Tạo đồ thị ảo (Graph Projection)
+			```cypher
+				CALL gds.graph.project(
+					'contentGraph',
+					['Course','Topic'],
+					['HAS_TOPIC']
+				);
+			```
+		### Bước 3: Chạy thuật toán Node Similarity
+			```cypher
+				CALL gds.nodeSimilarity.write('contentGraph', {
+					nodeLabels:['Course','Topic'],
+					writeRelationshipType: 'CONTENT_SIMILAR',
+					writeProperty: 'score',
+					similarityCutoff: 0.5
+				});
+			```
+		### A. Tìm các Course tương tự một Course cụ thể (Tương ứng getSimilarItems)
+			```cypher
+				MATCH (i:Course {id: 23})-[r:CONTENT_SIMILAR]-(q:Course)
+				WHERE r.score >= 0.5
+				RETURN DISTINCT q
+				LIMIT 10;
+			```
+		### B. Gợi ý theo hồ sơ User (Tương ứng getProfilePageItems)
+			```cypher
+				MATCH (u:User {id: 1})-[r:RATED]->(i:Course)
+				WITH i, COLLECT(i) as ratedItems, (r.rating - 1) / 4.0 as normalizedRating
+				ORDER BY normalizedRating DESC
+				LIMIT 5
+
+				MATCH (i)-[rel:CONTENT_SIMILAR]-(q:Course)
+				WHERE NOT q IN ratedItems
+				WITH q, rel.score + 1.5 * normalizedRating as simScore
+				ORDER BY simScore DESC
+				WITH DISTINCT q, simScore
+				LIMIT 10
+				RETURN q.id as itemId, q.title as title, simScore as score;
+			```
+		
+		
