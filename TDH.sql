@@ -1,5 +1,5 @@
 ﻿-- Phải hoàn thành 100% khóa học mới được đánh giá và nhận chứng chỉ
-CREATE TRIGGER trg_KiemTraDieuKienDanhGia
+ALTER TRIGGER trg_KiemTraDieuKienDanhGia
 ON DanhGia
 FOR INSERT
 AS
@@ -10,7 +10,8 @@ BEGIN
         WHERE t.PhanTramTienDo < 100 OR t.PhanTramTienDo IS NULL
     )
     BEGIN
-        RAISERROR (N'Lỗi: Bạn phải hoàn thành 100% khóa học mới được phép đánh giá!', 16, 1);
+        -- Đã sửa thành %% để không lỗi format
+        RAISERROR (N'Lỗi: Bạn phải hoàn thành 100%% khóa học mới được phép đánh giá!', 16, 1);
         ROLLBACK TRANSACTION;
     END
 END;
@@ -104,6 +105,7 @@ SELECT
     END AS GiaSauGiam
 FROM KhoaHoc kh
 LEFT JOIN KhuyenMai km ON kh.MaKhuyenMai = km.MaKhuyenMai;
+GO
 
 -- Không cho Publish nếu chưa có Lession hoặc Giá = 0
 CREATE TRIGGER trg_ChanPublishKhoaHoc
