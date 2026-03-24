@@ -9,3 +9,7 @@
     #### Thay đổi Properties/launchSettings.jon và mobile:
 
 		http://127.0.0.1:5128
+
+	### Database first
+	    
+		dotnet ef dbcontext scaffold "Server=localhost;Database=ELearning_DB;Trusted_Connection=True;TrustServerCertificate=True;" Microsoft.EntityFrameworkCore.SqlServer -o Models --context-dir Data -c AppDbContext --force
