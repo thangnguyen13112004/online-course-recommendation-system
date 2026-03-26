@@ -1,5 +1,5 @@
 ﻿-- Phải hoàn thành 100% khóa học mới được đánh giá và nhận chứng chỉ
-ALTER TRIGGER trg_KiemTraDieuKienDanhGia
+create TRIGGER trg_KiemTraDieuKienDanhGia
 ON DanhGia
 FOR INSERT
 AS

@@ -4,14 +4,14 @@ GO
 USE ELearning_DB;
 GO
 
--- USE master;
--- GO
+ --USE master;
+ --GO
 
--- ALTER DATABASE ELearning_DB 
--- SET SINGLE_USER 
--- WITH ROLLBACK IMMEDIATE;
+ --ALTER DATABASE ELearning_DB 
+ --SET SINGLE_USER 
+ --WITH ROLLBACK IMMEDIATE;
 
--- DROP DATABASE ELearning_DB;
+ --DROP DATABASE ELearning_DB;
 
 
 -- ==========================================
@@ -59,14 +59,16 @@ CREATE TABLE GioHang (
 );
 
 -- Bảng Hóa đơn
+-- Bảng Hóa đơn
 CREATE TABLE HoaDon (
     MaHoaDon INT IDENTITY(1,1) PRIMARY KEY,
     TongTien DECIMAL(18,2) NOT NULL,
     PhuongThucThanhToan NVARCHAR(100),
-    TinhTrangThanhToan NVARCHAR(100),
+    TinhTrangThanhToan BIT DEFAULT 0, -- 0: Chờ thanh toán, 1: Đã thanh toán
     NgayTao DATETIME DEFAULT GETDATE(),
     MaNguoiDung INT FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung)
 );
+
 
 -- Bảng Khóa học (Trung tâm)
 CREATE TABLE KhoaHoc (
@@ -133,12 +135,13 @@ CREATE TABLE ChungChi (
     MaNguoiDung INT FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung)
 );
 
+
 -- Bảng Tiến độ
 CREATE TABLE TienDo (
     MaTienDo INT IDENTITY(1,1) PRIMARY KEY,
     NgayThamGia DATETIME DEFAULT GETDATE(),
     PhanTramTienDo FLOAT DEFAULT 0 CHECK (PhanTramTienDo >= 0 AND PhanTramTienDo <= 100),
-    TinhTrang NVARCHAR(50),
+    TinhTrang BIT DEFAULT 0, -- 0: Đang học (chưa hoàn thành), 1: Đã hoàn thành
     MaKhoaHoc INT FOREIGN KEY REFERENCES KhoaHoc(MaKhoaHoc),
     MaNguoiDung INT FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung) 
 );
@@ -172,4 +175,67 @@ CREATE TABLE TienDoBaiHoc (
     ThoiGian INT, -- Lưu số phút hoặc số giây
 	MaTienDo INT FOREIGN KEY REFERENCES TienDo(MaTienDo)
 );
+GO
+
+-- 1. XÓA BẢNG THỪA (Recommendations)
+IF OBJECT_ID('Recommendations', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE Recommendations;
+    PRINT N'Đã xóa bảng Recommendations thành công!';
+END
+GO
+
+-- 1. Dọn dẹp bảng cũ (nếu có) để tránh lỗi khi người mới run code
+IF OBJECT_ID('Course_Likes', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE Course_Likes;
+END;
+GO
+
+-- 2. Tạo bảng Lượt Thích Khóa Học thuần Việt
+IF OBJECT_ID('LuotThichKhoaHoc', 'U') IS NULL
+BEGIN
+    CREATE TABLE LuotThichKhoaHoc (
+        MaLuotThich INT IDENTITY(1,1) PRIMARY KEY,
+        MaNguoiDung INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung),
+        MaKhoaHoc INT NOT NULL FOREIGN KEY REFERENCES KhoaHoc(MaKhoaHoc),
+        NgayTao DATETIME DEFAULT GETDATE(),
+        CONSTRAINT UQ_LuotThichKhoaHoc UNIQUE(MaNguoiDung, MaKhoaHoc)
+    );
+END;
+GO
+
+-- 3. Thêm dữ liệu mẫu
+IF NOT EXISTS (
+    SELECT 1 FROM LuotThichKhoaHoc lt
+    JOIN NguoiDung nd ON lt.MaNguoiDung = nd.MaNguoiDung
+    JOIN KhoaHoc kh ON lt.MaKhoaHoc = kh.MaKhoaHoc
+    WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App'
+)
+INSERT INTO LuotThichKhoaHoc (MaNguoiDung, MaKhoaHoc, NgayTao)
+SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-26'
+FROM NguoiDung nd CROSS JOIN KhoaHoc kh
+WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App';
+
+IF NOT EXISTS (
+    SELECT 1 FROM LuotThichKhoaHoc lt
+    JOIN NguoiDung nd ON lt.MaNguoiDung = nd.MaNguoiDung
+    JOIN KhoaHoc kh ON lt.MaKhoaHoc = kh.MaKhoaHoc
+    WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy'
+)
+INSERT INTO LuotThichKhoaHoc (MaNguoiDung, MaKhoaHoc, NgayTao)
+SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-26'
+FROM NguoiDung nd CROSS JOIN KhoaHoc kh
+WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy';
+
+IF NOT EXISTS (
+    SELECT 1 FROM LuotThichKhoaHoc lt
+    JOIN NguoiDung nd ON lt.MaNguoiDung = nd.MaNguoiDung
+    JOIN KhoaHoc kh ON lt.MaKhoaHoc = kh.MaKhoaHoc
+    WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản'
+)
+INSERT INTO LuotThichKhoaHoc (MaNguoiDung, MaKhoaHoc, NgayTao)
+SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-27'
+FROM NguoiDung nd CROSS JOIN KhoaHoc kh
+WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản';
 GO
