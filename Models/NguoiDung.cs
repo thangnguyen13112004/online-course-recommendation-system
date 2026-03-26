@@ -1,20 +1,39 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
-namespace online_course_recommendation_system.Models
+namespace online_course_recommendation_system.Models;
+
+public partial class NguoiDung
 {
-    [Table("NguoiDung")]
-    public class NguoiDung
-    {
-        [Key]
-        public int MaNguoiDung { get; set; }
-        public string Ten { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string MatKhau { get; set; } = string.Empty;
-        public string VaiTro { get; set; } = string.Empty; // HocVien, GiaoVien, Admin
-        public string? LinkAnhDaiDien { get; set; }
-        public string? TieuSu { get; set; }
-        public string TinhTrang { get; set; } = "Hoạt động";
-        public DateTime NgayTao { get; set; } = DateTime.Now;
-    }
+    public int MaNguoiDung { get; set; }
+
+    public string Ten { get; set; } = null!;
+
+    public string Email { get; set; } = null!;
+
+    public string MatKhau { get; set; } = null!;
+
+    public string? VaiTro { get; set; }
+
+    public string? LinkAnhDaiDien { get; set; }
+
+    public string? TieuSu { get; set; }
+
+    public string? TinhTrang { get; set; }
+
+    public DateTime? NgayTao { get; set; }
+
+    public virtual ICollection<ChungChi> ChungChis { get; set; } = new List<ChungChi>();
+
+    public virtual ICollection<CourseLike> CourseLikes { get; set; } = new List<CourseLike>();
+
+    public virtual ICollection<DanhGium> DanhGia { get; set; } = new List<DanhGium>();
+
+    public virtual ICollection<GiangVienKhoaHoc> GiangVienKhoaHocs { get; set; } = new List<GiangVienKhoaHoc>();
+
+    public virtual ICollection<GioHang> GioHangs { get; set; } = new List<GioHang>();
+
+    public virtual ICollection<HoaDon> HoaDons { get; set; } = new List<HoaDon>();
+
+    public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
 }
