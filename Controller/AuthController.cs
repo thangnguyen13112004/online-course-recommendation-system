@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using online_course_recommendation_system.Data;
 using online_course_recommendation_system.Models;
-using online_course_recommendation_system.DTO; // Import thư mục DTO của bạn
+using online_course_recommendation_system.DTO; 
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
