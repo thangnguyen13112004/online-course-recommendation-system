@@ -1,4 +1,4 @@
-﻿using Neo4j.Driver;
+using Neo4j.Driver;
 using online_course_recommendation_system.Configurations;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Data;
@@ -44,11 +44,12 @@ builder.Services.AddSwaggerGen(c =>
     // Cấu hình nút Authorize trên Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Nhập token theo định dạng: Bearer {token của bạn}",
+        Description = "Chỉ cần dán Token của bạn vào đây (không cần gõ chữ Bearer).",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -98,6 +99,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
