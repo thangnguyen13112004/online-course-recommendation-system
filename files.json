@@ -1,0 +1,21 @@
+[
+  "DTO/CategoryDto.cs",
+  "DTO/ChangePasswordDto.cs",
+  "DTO/UpdateProfileDto.cs",
+  "DTO/UpdateRoleDto.cs",
+  "DTO/UpdateStatusDto.cs",
+  "DTO/UserProfileDto.cs",
+  "build_err.log",
+  "build_log.txt",
+  "db_out.txt",
+  "files.json",
+  "fix_users.sql",
+  "status.txt",
+  "temp_out.txt",
+  "Controller/AuthController.cs",
+  "Controller/CategoriesController.cs",
+  "Controller/UsersController.cs",
+  "Program.cs",
+  "appsettings.Development.json",
+  "online-course-recommendation-system.csproj"
+]

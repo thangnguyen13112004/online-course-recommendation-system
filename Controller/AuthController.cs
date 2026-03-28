@@ -62,6 +62,10 @@ namespace online_course_recommendation_system.Controllers
             if (user == null || user.MatKhau != HashPassword(request.MatKhau))
                 return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác." });
 
+            // Khóa không cho User bị khóa đăng nhập
+            if (user.TinhTrang != "Hoạt động")
+                return Unauthorized(new { message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
+
             // Tạo chuỗi JWT Token
             var token = GenerateJwtToken(user);
 
