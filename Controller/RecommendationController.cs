@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
@@ -25,31 +25,34 @@ namespace online_course_recommendation_system.Controller
         {
             var recommendedCourses = new List<object>();
 
-            // Mở phiên làm việc với Neo4j
-            await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
-
-            // Collab: Tìm người giống mình-> gợi ý mình chưa học = dựa vào rated user hiện tại
-            var query = @"
-            MATCH (u1:User {id: $userId})-[r1:RATED]->(common_course:Course)<-[r2:RATED]-(u2:User)
-            WHERE u1 <> u2 AND r1.rating >= 4 AND r2.rating >= 4
-            MATCH (u2)-[r3:RATED]->(rec_course:Course)
-            WHERE r3.rating >= 4 AND NOT (u1)-[:RATED]->(rec_course)
-            RETURN rec_course.id AS CourseId, rec_course.title AS CourseTitle, count(u2) AS RecommendationScore
-            ORDER BY RecommendationScore DESC
-            LIMIT 5";
-
-            // Thực thi và lấy kết quả
-            var result = await session.RunAsync(query, new { userId });
-
-            await result.ForEachAsync(record =>
+            try
             {
-                recommendedCourses.Add(new
+                await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
+
+                var query = @"
+                MATCH (u1:User {id: $userId})-[r1:RATED]->(common_course:Course)<-[r2:RATED]-(u2:User)
+                WHERE u1 <> u2 AND r1.rating >= 4 AND r2.rating >= 4
+                MATCH (u2)-[r3:RATED]->(rec_course:Course)
+                WHERE r3.rating >= 4 AND NOT (u1)-[:RATED]->(rec_course)
+                RETURN rec_course.id AS CourseId, rec_course.title AS CourseTitle, count(u2) AS RecommendationScore
+                ORDER BY RecommendationScore DESC
+                LIMIT 5";
+
+                var result = await session.RunAsync(query, new { userId });
+                await result.ForEachAsync(record =>
                 {
-                    CourseId = record["CourseId"].As<int>(),
-                    CourseTitle = record["CourseTitle"].As<string>(),
-                    Score = record["RecommendationScore"].As<long>() 
+                    recommendedCourses.Add(new
+                    {
+                        CourseId = record["CourseId"].As<int>(),
+                        CourseTitle = record["CourseTitle"].As<string>(),
+                        Score = record["RecommendationScore"].As<long>()
+                    });
                 });
-            });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Recommendation] Neo4j error for user-based/{userId}: {ex.Message}");
+            }
 
             return Ok(recommendedCourses);
         }
@@ -97,26 +100,34 @@ namespace online_course_recommendation_system.Controller
         public async Task<IActionResult> GetSimilarCourses(int courseId)
         {
             var recommendedCourses = new List<object>();
-            await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
 
-            // Lưu ý: Đã sửa id: 23 thành $courseId, thêm điều kiện i.id <> q.id để loại bỏ chính nó, và Order By
-            var query = @"
-                MATCH (i:Course {id: $courseId})-[r:CONTENT_SIMILAR]-(q:Course)
-                WHERE r.score >= 0.2 AND i.id <> q.id
-                RETURN DISTINCT q.id AS CourseId, q.title AS Title, r.score AS Score
-                ORDER BY Score DESC
-                LIMIT 10";
-
-            var result = await session.RunAsync(query, new { courseId });
-            await result.ForEachAsync(record =>
+            try
             {
-                recommendedCourses.Add(new
+                await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
+
+                var query = @"
+                    MATCH (i:Course {id: $courseId})-[r:CONTENT_SIMILAR]-(q:Course)
+                    WHERE r.score >= 0.2 AND i.id <> q.id
+                    RETURN DISTINCT q.id AS CourseId, q.title AS Title, r.score AS Score
+                    ORDER BY Score DESC
+                    LIMIT 10";
+
+                var result = await session.RunAsync(query, new { courseId });
+                await result.ForEachAsync(record =>
                 {
-                    CourseId = record["CourseId"].As<int>(),
-                    Title = record["Title"].As<string>(),
-                    Score = record["Score"].As<double>() // Ép kiểu float/double cho score
+                    recommendedCourses.Add(new
+                    {
+                        CourseId = record["CourseId"].As<long>(),
+                        Title = record["Title"].As<string>(),
+                        Score = record["Score"].As<double>()
+                    });
                 });
-            });
+            }
+            catch (Exception ex)
+            {
+                // Neo4j không khả dụng — trả về mảng rỗng thay vì 500
+                Console.WriteLine($"[Recommendation] Neo4j error for similar-courses/{courseId}: {ex.Message}");
+            }
 
             return Ok(recommendedCourses);
         }
@@ -126,34 +137,40 @@ namespace online_course_recommendation_system.Controller
         public async Task<IActionResult> GetProfilePageItems(int userId)
         {
             var recommendedCourses = new List<object>();
-            await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
 
-            // Lưu ý: tìm khóa học được user này đánh giá cao -> đưa khóa học tương đồng
-            // Dựa trên rated của user đánh giá trước đó, nếu user chưa đánh giá 
-            var query = @"
-                MATCH (u:User {id: $userId})-[r:RATED]->(i:Course)
-                WITH i, COLLECT(i) as ratedItems, (r.rating - 1) / 4.0 as normalizedRating
-                ORDER BY normalizedRating DESC
-                LIMIT 5
-
-                MATCH (i)-[rel:CONTENT_SIMILAR]-(q:Course)
-                WHERE NOT q IN ratedItems
-                WITH q, rel.score + 1.5 * normalizedRating as simScore
-                ORDER BY simScore DESC
-                WITH DISTINCT q, simScore
-                LIMIT 10
-                RETURN q.id as CourseId, q.title as Title, simScore as Score";
-
-            var result = await session.RunAsync(query, new { userId });
-            await result.ForEachAsync(record =>
+            try
             {
-                recommendedCourses.Add(new
+                await using var session = _driver.AsyncSession(o => o.WithDatabase(_neo4jSettings.Database));
+
+                var query = @"
+                    MATCH (u:User {id: $userId})-[r:RATED]->(i:Course)
+                    WITH i, COLLECT(i) as ratedItems, (r.rating - 1) / 4.0 as normalizedRating
+                    ORDER BY normalizedRating DESC
+                    LIMIT 5
+
+                    MATCH (i)-[rel:CONTENT_SIMILAR]-(q:Course)
+                    WHERE NOT q IN ratedItems
+                    WITH q, rel.score + 1.5 * normalizedRating as simScore
+                    ORDER BY simScore DESC
+                    WITH DISTINCT q, simScore
+                    LIMIT 10
+                    RETURN q.id as CourseId, q.title as Title, simScore as Score";
+
+                var result = await session.RunAsync(query, new { userId });
+                await result.ForEachAsync(record =>
                 {
-                    CourseId = record["CourseId"].As<int>(),
-                    Title = record["Title"].As<string>(),
-                    Score = record["Score"].As<double>()
+                    recommendedCourses.Add(new
+                    {
+                        CourseId = record["CourseId"].As<long>(),
+                        Title = record["Title"].As<string>(),
+                        Score = record["Score"].As<double>()
+                    });
                 });
-            });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Recommendation] Neo4j error for user-profile/{userId}: {ex.Message}");
+            }
 
             return Ok(recommendedCourses);
         }

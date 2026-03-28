@@ -56,6 +56,25 @@ namespace online_course_recommendation_system.Controllers
             return Ok(new { message = "Cập nhật profile thành công!", data = MapToProfileDto(user) });
         }
 
+        // ②.5 DELETE /api/users/profile — Vô hiệu hóa tài khoản thân (chuyển sang "Bị khóa")
+        [Authorize]
+        [HttpDelete("profile")]
+        public async Task<IActionResult> DeactivateMyProfile()
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null)
+                return Unauthorized(new { message = "Token không hợp lệ." });
+
+            var user = await _context.NguoiDungs.FindAsync(userId.Value);
+            if (user == null)
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+
+            user.TinhTrang = "Bị khóa"; // Tương đương vô hiệu hóa
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tài khoản của bạn đã bị ngừng hoạt động." });
+        }
+
         // ③ GET /api/users/{id} — Xem profile công khai (không cần đăng nhập)
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPublicProfile(int id)
@@ -126,24 +145,32 @@ namespace online_course_recommendation_system.Controllers
         [HttpPut("{id}/role")]
         public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateRoleDto request)
         {
-            // Validate vai trò hợp lệ
-            var validRoles = new[] { "HocVien", "GiangVien", "Admin" };
-            if (!validRoles.Contains(request.VaiTro))
-                return BadRequest(new { message = $"Vai trò không hợp lệ. Chỉ chấp nhận: {string.Join(", ", validRoles)}" });
+            try
+            {
+                // Validate vai trò hợp lệ
+                var validRoles = new[] { "HocVien", "GiaoVien", "Admin" };
+                if (!validRoles.Contains(request.VaiTro))
+                    return BadRequest(new { message = $"Vai trò không hợp lệ. Chỉ chấp nhận: {string.Join(", ", validRoles)}" });
 
-            // Không cho Admin tự hạ vai trò chính mình
-            var currentUserId = GetUserIdFromToken();
-            if (currentUserId == id)
-                return BadRequest(new { message = "Không thể thay đổi vai trò của chính mình." });
+                // Không cho Admin tự hạ vai trò chính mình
+                var currentUserId = GetUserIdFromToken();
+                if (currentUserId == id)
+                    return BadRequest(new { message = "Không thể thay đổi vai trò của chính mình." });
 
-            var user = await _context.NguoiDungs.FindAsync(id);
-            if (user == null)
-                return NotFound(new { message = "Không tìm thấy người dùng." });
+                var user = await _context.NguoiDungs.FindAsync(id);
+                if (user == null)
+                    return NotFound(new { message = "Không tìm thấy người dùng." });
 
-            user.VaiTro = request.VaiTro;
-            await _context.SaveChangesAsync();
+                user.VaiTro = request.VaiTro;
+                await _context.SaveChangesAsync();
 
-            return Ok(new { message = $"Đã cập nhật vai trò của '{user.Ten}' thành '{request.VaiTro}'." });
+                return Ok(new { message = $"Đã cập nhật vai trò của '{user.Ten}' thành '{request.VaiTro}'." });
+            }
+            catch (Exception ex)
+            {
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = $"Lỗi server: {innerMsg}" });
+            }
         }
 
         // ⑥ PUT /api/users/{id}/status — Admin khóa/mở khóa tài khoản
