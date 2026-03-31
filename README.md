@@ -13,3 +13,9 @@ http://127.0.0.1:5128
 ``` bash
 dotnet ef dbcontext scaffold "Server=localhost;Database=ELearning_DB;Trusted_Connection=True;TrustServerCertificate=True;" Microsoft.EntityFrameworkCore.SqlServer -o Models --context-dir Data -c AppDbContext --force
 ```
+
+# 2. Hướng dẫn thiết lập cấu hình môi trường (.json)
+Vì lý do bảo mật, file cấu hình chứa chuỗi kết nối và mật khẩu đã được loại khỏi Git. Khi clone code về, bạn cần tạo lại 2 file này từ file mẫu:
+1. Đổi tên (hoặc copy) `appsettings.example.json` thành `appsettings.json`.
+2. Đổi tên (hoặc copy) `appsettings.Development.example.json` thành `appsettings.Development.json` (dành cho chạy localhost).
+3. Mở các file vừa tạo và điền thông tin thật của `Server` cho SQL Server, `Password` cho database Neo4j, và thiết lập `Key` cho đoạn xài JWT Token (chuỗi ngẫu nhiên bí mật).
