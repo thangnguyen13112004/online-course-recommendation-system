@@ -151,73 +151,129 @@ namespace online_course_recommendation_system.Controllers
             });
         }
 
-        // ④ POST /api/instructor/courses — Tạo khóa học mới
-        [HttpPost("courses")]
-        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequest request)
+        // ③.5 GET /api/instructor/stats/revenue-series — Doanh thu theo tháng
+        [HttpGet("stats/revenue-series")]
+        public async Task<IActionResult> GetRevenueSeries([FromQuery] int year = 0)
         {
             var userId = GetUserIdFromToken();
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var course = new KhoaHoc
-            {
-                TieuDe = request.TieuDe,
-                TieuDePhu = request.TieuDePhu,
-                MoTa = request.MoTa,
-                GiaGoc = request.GiaGoc,
-                MaTheLoai = request.MaTheLoai,
-                KiNang = request.KiNang,
-                NgayTao = DateTime.Now,
-                NgayCapNhat = DateTime.Now,
-                TinhTrang = "Draft", // Mặc định là Nháp
-                TbdanhGia = 0
-            };
+            if (year == 0) year = DateTime.Now.Year;
 
-            _context.KhoaHocs.Add(course);
-            await _context.SaveChangesAsync();
+            var courseIds = await _context.GiangVienKhoaHocs
+                .Where(gv => gv.MaGiangVien == userId.Value)
+                .Select(gv => gv.MaKhoaHoc)
+                .ToListAsync();
 
-            // Liên kết giáo viên với khóa học
-            _context.GiangVienKhoaHocs.Add(new GiangVienKhoaHoc
-            {
-                MaGiangVien = userId.Value,
-                MaKhoaHoc = course.MaKhoaHoc,
-                LaGiangVienChinh = true
+            var rawData = await _context.ChiTietHoaDons
+                .Include(ct => ct.MaHoaDonNavigation)
+                .Where(ct => ct.MaKhoaHoc.HasValue && courseIds.Contains(ct.MaKhoaHoc.Value) &&
+                             ct.MaHoaDonNavigation != null && ct.MaHoaDonNavigation.NgayTao.HasValue &&
+                             ct.MaHoaDonNavigation.NgayTao.Value.Year == year && 
+                             ct.MaHoaDonNavigation.TinhTrangThanhToan == true // chỉ tính đơn đã thanh toán
+                             )
+                .ToListAsync();
+
+            var groupedData = rawData
+                .GroupBy(ct => ct.MaHoaDonNavigation!.NgayTao!.Value.Month)
+                .Select(g => new {
+                    MonthNum = g.Key,
+                    Revenue = g.Sum(ct => ct.Gia ?? 0)
+                })
+                .ToList();
+
+            var result = Enumerable.Range(1, 12).Select(m => new {
+                Month = $"T{m}",
+                Revenue = groupedData.FirstOrDefault(d => d.MonthNum == m)?.Revenue ?? 0
             });
-            await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Tạo khóa học thành công.", courseId = course.MaKhoaHoc });
+            return Ok(result);
+        }
+
+        // ④ POST /api/instructor/courses — Tạo khóa học mới
+        [HttpPost("courses")]
+        public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequest request)
+        {
+            try
+            {
+                var userId = GetUserIdFromToken();
+                if (userId == null)
+                    return Unauthorized(new { message = "Token không hợp lệ." });
+
+                var course = new KhoaHoc
+                {
+                    TieuDe = request.TieuDe,
+                    TieuDePhu = request.TieuDePhu,
+                    MoTa = request.MoTa,
+                    GiaGoc = request.GiaGoc,
+                    MaTheLoai = request.MaTheLoai,
+                    KiNang = request.KiNang,
+                    NgayTao = DateTime.Now,
+                    NgayCapNhat = DateTime.Now,
+                    TinhTrang = "Draft", // Mặc định là Nháp
+                    TbdanhGia = 0
+                };
+
+                _context.KhoaHocs.Add(course);
+                await _context.SaveChangesAsync();
+
+                // Liên kết giáo viên với khóa học
+                _context.GiangVienKhoaHocs.Add(new GiangVienKhoaHoc
+                {
+                    MaGiangVien = userId.Value,
+                    MaKhoaHoc = course.MaKhoaHoc,
+                    LaGiangVienChinh = true
+                });
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Tạo khóa học thành công.", courseId = course.MaKhoaHoc });
+            }
+            catch (Exception ex)
+            {
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : "";
+                return StatusCode(500, new { message = $"Error: {ex.Message}. Inner: {innerMessage}" });
+            }
         }
 
         // ⑤ PUT /api/instructor/courses/{id} — Cập nhật thông tin khóa học
         [HttpPut("courses/{id}")]
         public async Task<IActionResult> UpdateCourse(int id, [FromBody] UpdateCourseRequest request)
         {
-            var userId = GetUserIdFromToken();
-            if (userId == null)
-                return Unauthorized(new { message = "Token không hợp lệ." });
-
-            // Kiểm tra xem giáo viên có quyền sở hữu khóa học hay không
-            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
-            if (!isOwner) return Forbid();
-
-            var course = await _context.KhoaHocs.FindAsync(id);
-            if (course == null) return NotFound(new { message = "Không tìm thấy khóa học." });
-
-            course.TieuDe = request.TieuDe;
-            course.TieuDePhu = request.TieuDePhu;
-            course.MoTa = request.MoTa;
-            course.GiaGoc = request.GiaGoc;
-            course.MaTheLoai = request.MaTheLoai;
-            course.KiNang = request.KiNang;
-            if (!string.IsNullOrEmpty(request.TinhTrang))
+            try
             {
-                course.TinhTrang = request.TinhTrang;
+                var userId = GetUserIdFromToken();
+                if (userId == null)
+                    return Unauthorized(new { message = "Token không hợp lệ." });
+
+                // Kiểm tra xem giáo viên có quyền sở hữu khóa học hay không
+                var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
+                if (!isOwner) return Forbid();
+
+                var course = await _context.KhoaHocs.FindAsync(id);
+                if (course == null) return NotFound(new { message = "Không tìm thấy khóa học." });
+
+                course.TieuDe = request.TieuDe;
+                course.TieuDePhu = request.TieuDePhu;
+                course.MoTa = request.MoTa;
+                course.GiaGoc = request.GiaGoc;
+                course.MaTheLoai = request.MaTheLoai;
+                course.KiNang = request.KiNang;
+                if (!string.IsNullOrEmpty(request.TinhTrang))
+                {
+                    course.TinhTrang = request.TinhTrang;
+                }
+                course.NgayCapNhat = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Cập nhật khóa học thành công." });
             }
-            course.NgayCapNhat = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Cập nhật khóa học thành công." });
+            catch (Exception ex)
+            {
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : "";
+                return StatusCode(500, new { message = $"Error: {ex.Message}. Inner: {innerMessage}" });
+            }
         }
 
         // ⑥ POST /api/instructor/courses/{courseId}/chapters — Tạo chương mới
