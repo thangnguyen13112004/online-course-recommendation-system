@@ -40,7 +40,7 @@ namespace online_course_recommendation_system.Controllers
                 MaNguoiDung = userId.Value,
                 TongTien = 0,
                 PhuongThucThanhToan = request?.PhuongThucThanhToan ?? "Chuyển khoản",
-                TinhTrangThanhToan = "Đã thanh toán",
+                TinhTrangThanhToan = true,
                 NgayTao = DateTime.Now
             };
 
@@ -121,7 +121,7 @@ namespace online_course_recommendation_system.Controllers
                     h.MaHoaDon,
                     h.TongTien,
                     h.PhuongThucThanhToan,
-                    h.TinhTrangThanhToan,
+                    TinhTrangThanhToan = h.TinhTrangThanhToan == true ? "Đã thanh toán" : "Chờ thanh toán",
                     h.NgayTao,
                     ChiTiet = h.ChiTietHoaDons.Select(ct => new
                     {

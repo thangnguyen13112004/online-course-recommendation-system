@@ -1,0 +1,48 @@
+﻿Text
+----
+
+
+-- Không cho Publish n?u chua có Lession ho?c Giá = 0
+
+CREATE TRIGGER trg_ChanPublishKhoaHoc
+
+ON KhoaHoc
+
+FOR UPDATE
+
+AS
+
+BEGIN
+
+    IF UPDATE(TinhTrang)
+
+    BEGIN
+
+        IF EXISTS (
+
+            SELECT 1 FROM inserted i
+
+            WHERE i.TinhTrang = 'Published' 
+
+            AND (
+
+                i.GiaGoc IS NULL OR i.GiaGoc <= 0 
+
+                OR NOT EXISTS (SELECT 1 FROM Chuong c JOIN BaiHoc b ON c.MaChuong = b.MaChuong WHERE c.MaKhoaHoc = i.MaKhoaHoc)
+
+            )
+
+        )
+
+        BEGIN
+
+            RAISERROR (N'L?i: Khóa h?c ph?i có giá > 0 và có ít nh?t 1 bài h?c m?i du?c Publish.', 16, 1);
+
+            ROLLBACK TRANSACTION;
+
+        END
+
+    END
+
+END;
+

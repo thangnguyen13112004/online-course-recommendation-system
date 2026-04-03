@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Models;
@@ -228,7 +228,7 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhuongThucThanhToan).HasMaxLength(100);
-            entity.Property(e => e.TinhTrangThanhToan).HasMaxLength(100);
+            entity.Property(e => e.TinhTrangThanhToan).HasColumnType("bit");
             entity.Property(e => e.TongTien).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.HoaDons)
