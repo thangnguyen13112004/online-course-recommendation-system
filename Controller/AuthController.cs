@@ -62,6 +62,10 @@ namespace online_course_recommendation_system.Controllers
             if (user == null || user.MatKhau != HashPassword(request.MatKhau))
                 return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác." });
 
+            // Khóa không cho User bị khóa đăng nhập
+            if (user.TinhTrang != "Hoạt động")
+                return Unauthorized(new { message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
+
             // Tạo chuỗi JWT Token
             var token = GenerateJwtToken(user);
 
@@ -92,6 +96,31 @@ namespace online_course_recommendation_system.Controllers
             return Ok(new { message = "Mật khẩu của bạn đã được reset về mặc định: 123456" });
         }
 
+
+        // --- API ĐỔI MẬT KHẨU ---
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
+        {
+            // Lấy UserId từ JWT Token
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized(new { message = "Token không hợp lệ." });
+
+            var user = await _context.NguoiDungs.FindAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+
+            // Kiểm tra mật khẩu cũ
+            if (user.MatKhau != HashPassword(request.MatKhauCu))
+                return BadRequest(new { message = "Mật khẩu hiện tại không đúng." });
+
+            // Cập nhật mật khẩu mới
+            user.MatKhau = HashPassword(request.MatKhauMoi);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đổi mật khẩu thành công!" });
+        }
 
         // ==========================================
         // CÁC HÀM HỖ TRỢ XỬ LÝ NGHIỆP VỤ BÊN DƯỚI

@@ -1,4 +1,4 @@
-﻿using Neo4j.Driver;
+using Neo4j.Driver;
 using online_course_recommendation_system.Configurations;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Data;
@@ -30,8 +30,24 @@ builder.Services.AddSingleton<IDriver>(sp =>
     );
 });
 
+// CORS cho Frontend Angular
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // 1. Thêm các Controllers vào hệ thống
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 // 2. KHÚC NÀY ĐỂ BẬT SWAGGER NÈ
 builder.Services.AddEndpointsApiExplorer();
@@ -44,11 +60,12 @@ builder.Services.AddSwaggerGen(c =>
     // Cấu hình nút Authorize trên Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Nhập token theo định dạng: Bearer {token của bạn}",
+        Description = "Chỉ cần dán Token của bạn vào đây (không cần gõ chữ Bearer).",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -98,6 +115,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAngular");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

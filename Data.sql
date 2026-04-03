@@ -748,7 +748,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'an.nguyen@student.vn' AND hd.NgayTao = '2026-02-11T09:00:00'
 )
 INSERT INTO HoaDon (TongTien, PhuongThucThanhToan, TinhTrangThanhToan, NgayTao, MaNguoiDung)
-SELECT 0, N'VNPay', N'Đã thanh toán', '2026-02-11T09:00:00', nd.MaNguoiDung
+SELECT 0, N'VNPay', 1, '2026-02-11T09:00:00', nd.MaNguoiDung
 FROM NguoiDung nd
 WHERE nd.Email = 'an.nguyen@student.vn';
 
@@ -757,7 +757,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'binh.tran@student.vn' AND hd.NgayTao = '2026-02-12T10:00:00'
 )
 INSERT INTO HoaDon (TongTien, PhuongThucThanhToan, TinhTrangThanhToan, NgayTao, MaNguoiDung)
-SELECT 0, N'MoMo', N'Đã thanh toán', '2026-02-12T10:00:00', nd.MaNguoiDung
+SELECT 0, N'MoMo', 1, '2026-02-12T10:00:00', nd.MaNguoiDung
 FROM NguoiDung nd
 WHERE nd.Email = 'binh.tran@student.vn';
 
@@ -766,7 +766,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'chi.le@student.vn' AND hd.NgayTao = '2026-02-13T11:00:00'
 )
 INSERT INTO HoaDon (TongTien, PhuongThucThanhToan, TinhTrangThanhToan, NgayTao, MaNguoiDung)
-SELECT 0, N'Chuyển khoản', N'Đã thanh toán', '2026-02-13T11:00:00', nd.MaNguoiDung
+SELECT 0, N'Chuyển khoản', 1, '2026-02-13T11:00:00', nd.MaNguoiDung
 FROM NguoiDung nd
 WHERE nd.Email = 'chi.le@student.vn';
 
@@ -775,7 +775,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'dung.pham@student.vn' AND hd.NgayTao = '2026-02-14T14:00:00'
 )
 INSERT INTO HoaDon (TongTien, PhuongThucThanhToan, TinhTrangThanhToan, NgayTao, MaNguoiDung)
-SELECT 0, N'VNPay', N'Đã thanh toán', '2026-02-14T14:00:00', nd.MaNguoiDung
+SELECT 0, N'VNPay', 1, '2026-02-14T14:00:00', nd.MaNguoiDung
 FROM NguoiDung nd
 WHERE nd.Email = 'dung.pham@student.vn';
 
@@ -785,7 +785,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'em.hoang@student.vn' AND hd.NgayTao = '2026-02-15T15:00:00'
 )
 INSERT INTO HoaDon (TongTien, PhuongThucThanhToan, TinhTrangThanhToan, NgayTao, MaNguoiDung)
-SELECT 0, N'VNPay', N'Chờ thanh toán', '2026-02-15T15:00:00', nd.MaNguoiDung
+SELECT 0, N'VNPay', 0, '2026-02-15T15:00:00', nd.MaNguoiDung
 FROM NguoiDung nd
 WHERE nd.Email = 'em.hoang@student.vn';
 GO
@@ -909,7 +909,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-11', 100, N'Đã hoàn thành', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-11', 100, 1, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy' AND nd.Email = 'an.nguyen@student.vn';
 
@@ -919,7 +919,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'Python cho Data Analysis'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-11', 50, N'Đang học', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-11', 50, 0, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'Python cho Data Analysis' AND nd.Email = 'an.nguyen@student.vn';
 
@@ -929,7 +929,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-12', 75, N'Đang học', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-12', 75, 0, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'ReactJS Thực Chiến cho Web App' AND nd.Email = 'binh.tran@student.vn';
 
@@ -939,7 +939,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-12', 100, N'Đã hoàn thành', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-12', 100, 1, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'Machine Learning Cơ Bản' AND nd.Email = 'binh.tran@student.vn';
 
@@ -949,7 +949,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'chi.le@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-13', 100, N'Đã hoàn thành', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-13', 100, 1, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy' AND nd.Email = 'chi.le@student.vn';
 
@@ -959,7 +959,7 @@ IF NOT EXISTS (
     WHERE nd.Email = 'dung.pham@student.vn' AND kh.TieuDe = N'Python cho Data Analysis'
 )
 INSERT INTO TienDo (NgayThamGia, PhanTramTienDo, TinhTrang, MaKhoaHoc, MaNguoiDung)
-SELECT '2026-02-14', 100, N'Đã hoàn thành', kh.MaKhoaHoc, nd.MaNguoiDung
+SELECT '2026-02-14', 100, 1, kh.MaKhoaHoc, nd.MaNguoiDung
 FROM KhoaHoc kh CROSS JOIN NguoiDung nd
 WHERE kh.TieuDe = N'Python cho Data Analysis' AND nd.Email = 'dung.pham@student.vn';
 GO
@@ -1219,134 +1219,6 @@ OUTER APPLY (
 ) dg;
 GO
 
-/*
-============================================================
-[OPTIONAL_LIKE_01] BỔ SUNG BẢNG LIKE KHÓA HỌC THEO ĐÚNG ĐỀ CƯƠNG
-- Đề cương có chức năng like khóa học, nhưng schema SQL hiện tại chưa có bảng riêng.
-- Block này là MỞ RỘNG TÙY CHỌN, chỉ chạy nếu bạn muốn test đúng đề cương.
-============================================================
-*/
-IF OBJECT_ID('Course_Likes', 'U') IS NULL
-BEGIN
-    CREATE TABLE Course_Likes (
-        like_id INT IDENTITY(1,1) PRIMARY KEY,
-        user_id INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung),
-        course_id INT NOT NULL FOREIGN KEY REFERENCES KhoaHoc(MaKhoaHoc),
-        created_at DATETIME DEFAULT GETDATE(),
-        CONSTRAINT UQ_CourseLike UNIQUE(user_id, course_id)
-    );
-END;
-GO
-
-IF NOT EXISTS (
-    SELECT 1 FROM Course_Likes cl
-    JOIN NguoiDung nd ON cl.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON cl.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App'
-)
-INSERT INTO Course_Likes (user_id, course_id, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-26'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App';
-
-IF NOT EXISTS (
-    SELECT 1 FROM Course_Likes cl
-    JOIN NguoiDung nd ON cl.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON cl.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy'
-)
-INSERT INTO Course_Likes (user_id, course_id, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-26'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'binh.tran@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy';
-
-IF NOT EXISTS (
-    SELECT 1 FROM Course_Likes cl
-    JOIN NguoiDung nd ON cl.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON cl.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản'
-)
-INSERT INTO Course_Likes (user_id, course_id, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, '2026-02-27'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản';
-GO
-
-/*
-============================================================
-[OPTIONAL_RECO_01] BỔ SUNG BẢNG GỢI Ý KHÓA HỌC THEO ĐÚNG ĐỀ CƯƠNG
-- Đề cương có chức năng xem khóa học gợi ý, nhưng schema SQL hiện tại chưa có bảng này.
-- Block này là MỞ RỘNG TÙY CHỌN, chỉ chạy nếu bạn muốn test màn hình recommendation.
-============================================================
-*/
-IF OBJECT_ID('Recommendations', 'U') IS NULL
-BEGIN
-    CREATE TABLE Recommendations (
-        recommendation_id INT IDENTITY(1,1) PRIMARY KEY,
-        user_id INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaNguoiDung),
-        course_id INT NOT NULL FOREIGN KEY REFERENCES KhoaHoc(MaKhoaHoc),
-        score FLOAT NOT NULL,
-        created_at DATETIME DEFAULT GETDATE()
-    );
-END;
-GO
-
-IF NOT EXISTS (
-    SELECT 1 FROM Recommendations r
-    JOIN NguoiDung nd ON r.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON r.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản'
-)
-INSERT INTO Recommendations (user_id, course_id, score, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, 0.93, '2026-02-28'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'Machine Learning Cơ Bản';
-
-IF NOT EXISTS (
-    SELECT 1 FROM Recommendations r
-    JOIN NguoiDung nd ON r.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON r.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App'
-)
-INSERT INTO Recommendations (user_id, course_id, score, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, 0.88, '2026-02-28'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'an.nguyen@student.vn' AND kh.TieuDe = N'ReactJS Thực Chiến cho Web App';
-
-IF NOT EXISTS (
-    SELECT 1 FROM Recommendations r
-    JOIN NguoiDung nd ON r.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON r.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy'
-)
-INSERT INTO Recommendations (user_id, course_id, score, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, 0.91, '2026-02-28'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'ASP.NET Core từ Zero đến Deploy';
-
-IF NOT EXISTS (
-    SELECT 1 FROM Recommendations r
-    JOIN NguoiDung nd ON r.user_id = nd.MaNguoiDung
-    JOIN KhoaHoc kh ON r.course_id = kh.MaKhoaHoc
-    WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Python cho Data Analysis'
-)
-INSERT INTO Recommendations (user_id, course_id, score, created_at)
-SELECT nd.MaNguoiDung, kh.MaKhoaHoc, 0.84, '2026-02-28'
-FROM NguoiDung nd CROSS JOIN KhoaHoc kh
-WHERE nd.Email = 'em.hoang@student.vn' AND kh.TieuDe = N'Python cho Data Analysis';
-GO
-
-/*
-============================================================
-[TEST_QUERY_01] NGƯỜI HỌC - TÌM KHÓA HỌC / GIÁ THỰC TẾ
-============================================================
-*/
- SELECT kh.MaKhoaHoc, kh.TieuDe, tl.Ten AS TheLoai, kh.TinhTrang, v.GiaSauGiam
- FROM KhoaHoc kh
- JOIN TheLoai tl ON kh.MaTheLoai = tl.MaTheLoai
- LEFT JOIN vw_KhoaHoc_GiaThucTe v ON kh.MaKhoaHoc = v.MaKhoaHoc
- ORDER BY kh.MaKhoaHoc;
-GO
 
 /*
 ============================================================
@@ -1522,3 +1394,45 @@ GO
 GO
 
 PRINT N'Đã seed dữ liệu test cho ELearning_DB.';
+
+
+USE ELearning_DB;
+GO
+
+-- 1. Xóa toàn bộ dữ liệu hiện có (Xóa từ bảng con ngược lên bảng cha)
+DELETE FROM TienDoBaiHoc;
+DELETE FROM BaiHoc;
+DELETE FROM Chuong;
+DELETE FROM ChungChi;
+DELETE FROM DanhGia;
+DELETE FROM TienDo;
+DELETE FROM ChiTietHoaDon;
+DELETE FROM ChiTietGioHang;
+DELETE FROM HoaDon;
+DELETE FROM GioHang;
+DELETE FROM GiangVien_KhoaHoc;
+IF OBJECT_ID('LuotThichKhoaHoc', 'U') IS NOT NULL DELETE FROM LuotThichKhoaHoc;
+DELETE FROM KhoaHoc;
+DELETE FROM TheLoai;
+DELETE FROM KhuyenMai;
+DELETE FROM NguoiDung;
+GO
+
+-- 2. Reset lại bộ đếm ID (Identity) về số 0 để khi insert nó đếm lại cho chuẩn
+DBCC CHECKIDENT ('TienDoBaiHoc', RESEED, 0);
+DBCC CHECKIDENT ('BaiHoc', RESEED, 0);
+DBCC CHECKIDENT ('Chuong', RESEED, 0);
+DBCC CHECKIDENT ('ChungChi', RESEED, 0);
+DBCC CHECKIDENT ('DanhGia', RESEED, 0);
+DBCC CHECKIDENT ('TienDo', RESEED, 0);
+DBCC CHECKIDENT ('ChiTietHoaDon', RESEED, 0);
+DBCC CHECKIDENT ('HoaDon', RESEED, 0);
+DBCC CHECKIDENT ('ChiTietGioHang', RESEED, 0);
+DBCC CHECKIDENT ('GioHang', RESEED, 0);
+DBCC CHECKIDENT ('KhoaHoc', RESEED, 0);
+DBCC CHECKIDENT ('TheLoai', RESEED, 0);
+DBCC CHECKIDENT ('KhuyenMai', RESEED, 0);
+DBCC CHECKIDENT ('NguoiDung', RESEED, 0);
+GO
+
+PRINT N'Đã dọn dẹp xong toàn bộ database, sẵn sàng đón dữ liệu mới!';
