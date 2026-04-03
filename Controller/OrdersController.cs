@@ -40,7 +40,7 @@ namespace online_course_recommendation_system.Controllers
                 MaNguoiDung = userId.Value,
                 TongTien = 0,
                 PhuongThucThanhToan = request?.PhuongThucThanhToan ?? "Chuyển khoản",
-                TinhTrangThanhToan = "Đã thanh toán",
+                TinhTrangThanhToan = true,
                 NgayTao = DateTime.Now
             };
 
@@ -74,7 +74,7 @@ namespace online_course_recommendation_system.Controllers
                             MaNguoiDung = userId.Value,
                             MaKhoaHoc = item.MaKhoaHoc,
                             PhanTramTienDo = 0,
-                            TinhTrang = "Đang học",
+                            TinhTrang = false,
                             NgayThamGia = DateTime.Now
                         });
                     }
