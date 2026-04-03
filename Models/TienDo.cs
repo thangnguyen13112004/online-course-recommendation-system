@@ -11,7 +11,7 @@ public partial class TienDo
 
     public double? PhanTramTienDo { get; set; }
 
-    public string? TinhTrang { get; set; }
+    public bool? TinhTrang { get; set; }
 
     public int? MaKhoaHoc { get; set; }
 

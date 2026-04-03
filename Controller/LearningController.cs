@@ -169,7 +169,7 @@ namespace online_course_recommendation_system.Controllers
             // Nếu hoàn thành 100% → cấp chứng chỉ
             if (tienDo.PhanTramTienDo >= 100)
             {
-                tienDo.TinhTrang = "Hoàn thành";
+                tienDo.TinhTrang = true;
 
                 var hasCert = await _context.ChungChis
                     .AnyAsync(c => c.MaNguoiDung == userId.Value && c.MaKhoaHoc == courseId);

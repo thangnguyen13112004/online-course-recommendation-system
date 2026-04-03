@@ -11,7 +11,7 @@ public partial class HoaDon
 
     public string? PhuongThucThanhToan { get; set; }
 
-    public string? TinhTrangThanhToan { get; set; }
+    public bool? TinhTrangThanhToan { get; set; }
 
     public DateTime? NgayTao { get; set; }
 
