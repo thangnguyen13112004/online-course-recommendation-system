@@ -87,22 +87,22 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var existing = await _context.CourseLikes
-                .FirstOrDefaultAsync(l => l.UserId == userId.Value && l.CourseId == courseId);
+            var existing = await _context.LuotThichKhoaHocs
+                .FirstOrDefaultAsync(l => l.MaNguoiDung == userId.Value && l.MaKhoaHoc == courseId);
 
             if (existing != null)
             {
-                _context.CourseLikes.Remove(existing);
+                _context.LuotThichKhoaHocs.Remove(existing);
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Đã bỏ thích.", liked = false });
             }
             else
             {
-                _context.CourseLikes.Add(new CourseLike
+                _context.LuotThichKhoaHocs.Add(new LuotThichKhoaHoc
                 {
-                    UserId = userId.Value,
-                    CourseId = courseId,
-                    CreatedAt = DateTime.Now
+                    MaNguoiDung = userId.Value,
+                    MaKhoaHoc = courseId,
+                    NgayTao = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Đã thích!", liked = true });
@@ -117,17 +117,17 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var likes = await _context.CourseLikes
-                .Where(l => l.UserId == userId.Value)
-                .Include(l => l.Course)
+            var likes = await _context.LuotThichKhoaHocs
+                .Where(l => l.MaNguoiDung == userId.Value)
+                .Include(l => l.MaKhoaHocNavigation)
                 .Select(l => new
                 {
-                    l.Course.MaKhoaHoc,
-                    l.Course.TieuDe,
-                    l.Course.AnhUrl,
-                    l.Course.GiaGoc,
-                    l.Course.TbdanhGia,
-                    l.CreatedAt
+                    l.MaKhoaHocNavigation.MaKhoaHoc,
+                    l.MaKhoaHocNavigation.TieuDe,
+                    l.MaKhoaHocNavigation.AnhUrl,
+                    l.MaKhoaHocNavigation.GiaGoc,
+                    l.MaKhoaHocNavigation.TbdanhGia,
+                    l.NgayTao
                 })
                 .ToListAsync();
 

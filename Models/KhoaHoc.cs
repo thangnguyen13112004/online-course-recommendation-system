@@ -39,11 +39,11 @@ public partial class KhoaHoc
 
     public virtual ICollection<Chuong> Chuongs { get; set; } = new List<Chuong>();
 
-    public virtual ICollection<CourseLike> CourseLikes { get; set; } = new List<CourseLike>();
-
     public virtual ICollection<DanhGium> DanhGia { get; set; } = new List<DanhGium>();
 
     public virtual ICollection<GiangVienKhoaHoc> GiangVienKhoaHocs { get; set; } = new List<GiangVienKhoaHoc>();
+
+    public virtual ICollection<LuotThichKhoaHoc> LuotThichKhoaHocs { get; set; } = new List<LuotThichKhoaHoc>();
 
     public virtual KhuyenMai? MaKhuyenMaiNavigation { get; set; }
 
