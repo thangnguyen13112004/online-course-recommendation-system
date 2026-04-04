@@ -100,6 +100,12 @@ namespace online_course_recommendation_system.Controllers
             if (cart.ChiTietGioHangs.Any(ct => ct.MaKhoaHoc == courseId))
                 return BadRequest(new { message = "Khóa học đã có trong giỏ hàng." });
 
+            // Kiểm tra đã mua (đã đăng ký học) chưa
+            var alreadyEnrolled = await _context.TienDos
+                .AnyAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == courseId);
+            if (alreadyEnrolled)
+                return BadRequest(new { message = "Bạn đã sở hữu khóa học này rồi." });
+
             var cartItem = new ChiTietGioHang
             {
                 MaGioHang = cart.MaGioHang,
@@ -108,7 +114,17 @@ namespace online_course_recommendation_system.Controllers
             };
 
             _context.ChiTietGioHangs.Add(cartItem);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                if (innerMsg.Contains("sở hữu") || innerMsg.Contains("khóa học này"))
+                    return BadRequest(new { message = "Bạn đã sở hữu khóa học này, không thể thêm vào giỏ hàng." });
+                return BadRequest(new { message = innerMsg });
+            }
 
             return Ok(new { message = "Đã thêm vào giỏ hàng!", maChiTietGioHang = cartItem.MaChiTietGioHang });
         }
