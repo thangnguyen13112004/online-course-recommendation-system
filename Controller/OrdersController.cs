@@ -26,6 +26,9 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
+            try
+            {
+
             var cart = await _context.GioHangs
                 .Include(g => g.ChiTietGioHangs)
                     .ThenInclude(ct => ct.MaKhoaHocNavigation)
@@ -40,7 +43,7 @@ namespace online_course_recommendation_system.Controllers
                 MaNguoiDung = userId.Value,
                 TongTien = 0,
                 PhuongThucThanhToan = request?.PhuongThucThanhToan ?? "Chuyển khoản",
-                TinhTrangThanhToan = "Đã thanh toán",
+                TinhTrangThanhToan = true,
                 NgayTao = DateTime.Now
             };
 
@@ -74,7 +77,7 @@ namespace online_course_recommendation_system.Controllers
                             MaNguoiDung = userId.Value,
                             MaKhoaHoc = item.MaKhoaHoc,
                             PhanTramTienDo = 0,
-                            TinhTrang = "Đang học",
+                            TinhTrang = true,
                             NgayThamGia = DateTime.Now
                         });
                     }
@@ -93,6 +96,11 @@ namespace online_course_recommendation_system.Controllers
                 maHoaDon = hoaDon.MaHoaDon,
                 tongTien = hoaDon.TongTien
             });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.InnerException != null ? ex.InnerException.Message : ex.Message });
+            }
         }
 
         // ② GET /api/orders — Lịch sử đơn hàng
@@ -121,7 +129,7 @@ namespace online_course_recommendation_system.Controllers
                     h.MaHoaDon,
                     h.TongTien,
                     h.PhuongThucThanhToan,
-                    h.TinhTrangThanhToan,
+                    TinhTrangThanhToan = h.TinhTrangThanhToan == true ? "Đã thanh toán" : "Thất bại",
                     h.NgayTao,
                     ChiTiet = h.ChiTietHoaDons.Select(ct => new
                     {

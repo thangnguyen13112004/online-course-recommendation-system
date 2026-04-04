@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -11,7 +11,7 @@ public partial class TienDo
 
     public double? PhanTramTienDo { get; set; }
 
-    public string? TinhTrang { get; set; }
+    public bool? TinhTrang { get; set; }
 
     public int? MaKhoaHoc { get; set; }
 

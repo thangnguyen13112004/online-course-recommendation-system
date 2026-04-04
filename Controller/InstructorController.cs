@@ -95,7 +95,7 @@ namespace online_course_recommendation_system.Controllers
                         t.MaKhoaHocNavigation.TieuDe
                     },
                     t.PhanTramTienDo,
-                    t.TinhTrang,
+                    TinhTrang = t.TinhTrang == true ? "Đang học" : "Chưa bắt đầu",
                     t.NgayThamGia
                 })
                 .ToListAsync();
