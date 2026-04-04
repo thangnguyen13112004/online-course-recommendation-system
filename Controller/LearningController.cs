@@ -18,16 +18,22 @@ namespace online_course_recommendation_system.Controllers
             _context = context;
         }
 
-        // ① GET /api/learning/my-courses — Khóa học đã đăng ký + tiến độ
+        // ① GET /api/learning/my-courses — Khóa học đã đăng ký + tiến độ (Phân trang)
         [HttpGet("my-courses")]
-        public async Task<IActionResult> GetMyCourses()
+        public async Task<IActionResult> GetMyCourses(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             var userId = GetUserIdFromToken();
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var enrolledCourses = await _context.TienDos
-                .Where(t => t.MaNguoiDung == userId.Value)
+            var query = _context.TienDos
+                .Where(t => t.MaNguoiDung == userId.Value);
+
+            var totalCount = await query.CountAsync();
+
+            var enrolledCourses = await query
                 .Include(t => t.MaKhoaHocNavigation)
                     .ThenInclude(k => k!.MaTheLoaiNavigation)
                 .Include(t => t.MaKhoaHocNavigation)
@@ -35,11 +41,14 @@ namespace online_course_recommendation_system.Controllers
                         .ThenInclude(gv => gv.MaGiangVienNavigation)
                 .Include(t => t.MaKhoaHocNavigation)
                     .ThenInclude(k => k!.Chuongs)
+                .OrderByDescending(t => t.NgayThamGia)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(t => new
                 {
                     t.MaTienDo,
                     t.PhanTramTienDo,
-                    t.TinhTrang,
+                    TinhTrang = t.TinhTrang == true ? "Đang học" : "Chưa bắt đầu",
                     t.NgayThamGia,
                     KhoaHoc = t.MaKhoaHocNavigation == null ? null : new
                     {
@@ -58,7 +67,14 @@ namespace online_course_recommendation_system.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(enrolledCourses);
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                data = enrolledCourses
+            });
         }
 
         // ② GET /api/learning/course/{courseId} — Nội dung học (chương, bài, tiến độ)
@@ -77,39 +93,46 @@ namespace online_course_recommendation_system.Controllers
             if (tienDo == null)
                 return Forbidden("Bạn chưa đăng ký khóa học này.");
 
+            var completedLessonIds = tienDo.TienDoBaiHocs
+                .Where(tb => tb.DaHoanThanh == true)
+                .Select(tb => tb.MaBaiHoc)
+                .ToHashSet();
+
             var course = await _context.KhoaHocs
                 .Include(k => k.Chuongs)
                     .ThenInclude(c => c.BaiHocs)
                 .Include(k => k.GiangVienKhoaHocs)
                     .ThenInclude(gv => gv.MaGiangVienNavigation)
-                .Where(k => k.MaKhoaHoc == courseId)
-                .Select(k => new
+                .FirstOrDefaultAsync(k => k.MaKhoaHoc == courseId);
+
+            if (course == null)
+                return NotFound(new { message = "Không tìm thấy khóa học." });
+
+            var result = new
+            {
+                course.MaKhoaHoc,
+                course.TieuDe,
+                PhanTramTienDo = tienDo.PhanTramTienDo ?? 0,
+                GiangVien = course.GiangVienKhoaHocs
+                    .Where(gv => gv.LaGiangVienChinh == true)
+                    .Select(gv => gv.MaGiangVienNavigation?.Ten)
+                    .FirstOrDefault(),
+                Chuongs = course.Chuongs.Select(c => new
                 {
-                    k.MaKhoaHoc,
-                    k.TieuDe,
-                    PhanTramTienDo = tienDo.PhanTramTienDo,
-                    GiangVien = k.GiangVienKhoaHocs
-                        .Where(gv => gv.LaGiangVienChinh == true)
-                        .Select(gv => gv.MaGiangVienNavigation.Ten)
-                        .FirstOrDefault(),
-                    Chuongs = k.Chuongs.Select(c => new
+                    c.MaChuong,
+                    c.TieuDe,
+                    BaiHocs = c.BaiHocs.Select(b => new
                     {
-                        c.MaChuong,
-                        c.TieuDe,
-                        BaiHocs = c.BaiHocs.Select(b => new
-                        {
-                            b.MaBaiHoc,
-                            b.LyThuyet,
-                            b.LinkVideo,
-                            b.BaiTap,
-                            DaHoanThanh = tienDo.TienDoBaiHocs
-                                .Any(tb => tb.MaBaiHoc == b.MaBaiHoc && tb.DaHoanThanh == true)
-                        })
+                        b.MaBaiHoc,
+                        b.LyThuyet,
+                        b.LinkVideo,
+                        b.BaiTap,
+                        DaHoanThanh = completedLessonIds.Contains(b.MaBaiHoc)
                     })
                 })
-                .FirstOrDefaultAsync();
+            };
 
-            return Ok(course);
+            return Ok(result);
         }
 
         // ③ POST /api/learning/lesson/{lessonId}/complete — Đánh dấu hoàn thành bài học
@@ -169,7 +192,7 @@ namespace online_course_recommendation_system.Controllers
             // Nếu hoàn thành 100% → cấp chứng chỉ
             if (tienDo.PhanTramTienDo >= 100)
             {
-                tienDo.TinhTrang = "Hoàn thành";
+                tienDo.TinhTrang = true; // Hoàn thành — tracked by PhanTramTienDo >= 100
 
                 var hasCert = await _context.ChungChis
                     .AnyAsync(c => c.MaNguoiDung == userId.Value && c.MaKhoaHoc == courseId);
