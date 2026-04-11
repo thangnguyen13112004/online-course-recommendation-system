@@ -29,44 +29,54 @@ namespace online_course_recommendation_system.Controllers
             if (request.Rating < 1 || request.Rating > 5)
                 return BadRequest(new { message = "Rating phải từ 1 đến 5." });
 
+            // Kiểm tra đã mua khóa học chưa
+            var enrolled = await _context.TienDos
+                .AnyAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == request.MaKhoaHoc);
+            if (!enrolled)
+                return BadRequest(new { message = "Bạn cần mua khóa học này trước khi đánh giá." });
+
             // Kiểm tra đã đánh giá chưa
             var existing = await _context.DanhGia
                 .FirstOrDefaultAsync(d => d.MaNguoiDung == userId.Value && d.MaKhoaHoc == request.MaKhoaHoc);
 
             if (existing != null)
-            {
-                existing.Rating = request.Rating;
-                existing.BinhLuan = request.BinhLuan;
-                existing.NgayDanhGia = DateTime.Now;
-            }
-            else
-            {
-                _context.DanhGia.Add(new DanhGium
-                {
-                    MaNguoiDung = userId.Value,
-                    MaKhoaHoc = request.MaKhoaHoc,
-                    Rating = request.Rating,
-                    BinhLuan = request.BinhLuan,
-                    NgayDanhGia = DateTime.Now,
-                    Thich = 0
-                });
-            }
+                return BadRequest(new { message = "Bạn đã đánh giá khóa học này rồi. Mỗi người chỉ được đánh giá một lần." });
 
-            await _context.SaveChangesAsync();
-
-            // Cập nhật trung bình đánh giá khóa học
-            var avg = await _context.DanhGia
-                .Where(d => d.MaKhoaHoc == request.MaKhoaHoc && d.Rating.HasValue)
-                .AverageAsync(d => (double?)d.Rating) ?? 0;
-
-            var course = await _context.KhoaHocs.FindAsync(request.MaKhoaHoc);
-            if (course != null)
+            _context.DanhGia.Add(new DanhGium
             {
-                course.TbdanhGia = Math.Round(avg, 1);
+                MaNguoiDung = userId.Value,
+                MaKhoaHoc = request.MaKhoaHoc,
+                Rating = request.Rating,
+                BinhLuan = request.BinhLuan,
+                NgayDanhGia = DateTime.Now,
+                Thich = 0
+            });
+
+            try
+            {
                 await _context.SaveChangesAsync();
-            }
+                
+                // Cập nhật trung bình đánh giá khóa học
+                var reviews = _context.DanhGia.Where(d => d.MaKhoaHoc == request.MaKhoaHoc && d.Rating.HasValue);
+                double avg = 0;
+                if (await reviews.AnyAsync())
+                {
+                    avg = await reviews.AverageAsync(d => d.Rating.Value);
+                }
 
-            return Ok(new { message = existing != null ? "Cập nhật đánh giá thành công!" : "Đánh giá thành công!" });
+                var course = await _context.KhoaHocs.FindAsync(request.MaKhoaHoc);
+                if (course != null)
+                {
+                    course.TbdanhGia = Math.Round(avg, 1);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { message = "Đánh giá thành công! Cảm ơn bạn." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+            }
         }
 
         // ② POST /api/interactions/like/{courseId} — Like/Unlike khóa học
@@ -77,22 +87,22 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var existing = await _context.CourseLikes
-                .FirstOrDefaultAsync(l => l.UserId == userId.Value && l.CourseId == courseId);
+            var existing = await _context.LuotThichKhoaHocs
+                .FirstOrDefaultAsync(l => l.MaNguoiDung == userId.Value && l.MaKhoaHoc == courseId);
 
             if (existing != null)
             {
-                _context.CourseLikes.Remove(existing);
+                _context.LuotThichKhoaHocs.Remove(existing);
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Đã bỏ thích.", liked = false });
             }
             else
             {
-                _context.CourseLikes.Add(new CourseLike
+                _context.LuotThichKhoaHocs.Add(new LuotThichKhoaHoc
                 {
-                    UserId = userId.Value,
-                    CourseId = courseId,
-                    CreatedAt = DateTime.Now
+                    MaNguoiDung = userId.Value,
+                    MaKhoaHoc = courseId,
+                    NgayTao = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Đã thích!", liked = true });
@@ -107,17 +117,17 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            var likes = await _context.CourseLikes
-                .Where(l => l.UserId == userId.Value)
-                .Include(l => l.Course)
+            var likes = await _context.LuotThichKhoaHocs
+                .Where(l => l.MaNguoiDung == userId.Value)
+                .Include(l => l.MaKhoaHocNavigation)
                 .Select(l => new
                 {
-                    l.Course.MaKhoaHoc,
-                    l.Course.TieuDe,
-                    l.Course.AnhUrl,
-                    l.Course.GiaGoc,
-                    l.Course.TbdanhGia,
-                    l.CreatedAt
+                    l.MaKhoaHocNavigation.MaKhoaHoc,
+                    l.MaKhoaHocNavigation.TieuDe,
+                    l.MaKhoaHocNavigation.AnhUrl,
+                    l.MaKhoaHocNavigation.GiaGoc,
+                    l.MaKhoaHocNavigation.TbdanhGia,
+                    l.NgayTao
                 })
                 .ToListAsync();
 

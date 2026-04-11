@@ -18,11 +18,26 @@ namespace online_course_recommendation_system.Controllers
             _context = context;
         }
 
-        // ① GET /api/categories — Lấy tất cả danh mục (Public)
+        // ① GET /api/categories — Lấy tất cả danh mục (Phân trang)
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 100,
+            [FromQuery] string? search = null)
         {
-            var categories = await _context.TheLoais
+            var query = _context.TheLoais.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(c => c.Ten.Contains(search));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var categories = await query
+                .OrderBy(c => c.MaTheLoai)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(c => new
                 {
                     c.MaTheLoai,
@@ -32,7 +47,14 @@ namespace online_course_recommendation_system.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(categories);
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                data = categories
+            });
         }
 
         // ② GET /api/categories/{id} — Chi tiết 1 danh mục (Public)

@@ -19,11 +19,26 @@ namespace online_course_recommendation_system.Controllers
             _context = context;
         }
 
-        // ① GET /api/promotions — Lấy tất cả khuyến mãi
+        // ① GET /api/promotions — Lấy tất cả khuyến mãi (Phân trang)
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null)
         {
-            var promotions = await _context.KhuyenMais
+            var query = _context.KhuyenMais.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(km => km.TenChuongTrinh.Contains(search));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var promotions = await query
+                .OrderByDescending(km => km.NgayBatDau)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(km => new
                 {
                     km.MaKhuyenMai,
@@ -35,10 +50,16 @@ namespace online_course_recommendation_system.Controllers
                     TinhTrang = km.NgayKetThuc != null && km.NgayKetThuc < DateTime.Now
                         ? "expired" : "active"
                 })
-                .OrderByDescending(km => km.NgayBatDau)
                 .ToListAsync();
 
-            return Ok(promotions);
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                data = promotions
+            });
         }
 
         // ② GET /api/promotions/{id} — Chi tiết 1 khuyến mãi
