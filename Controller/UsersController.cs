@@ -76,7 +76,7 @@ namespace online_course_recommendation_system.Controllers
         }
 
         // ③ GET /api/users/{id} — Xem profile công khai (không cần đăng nhập)
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetPublicProfile(int id)
         {
             var user = await _context.NguoiDungs.FindAsync(id);
@@ -101,7 +101,8 @@ namespace online_course_recommendation_system.Controllers
         public async Task<IActionResult> GetAllUsers(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
-            [FromQuery] string? search = null)
+            [FromQuery] string? search = null,
+            [FromQuery] string? vaiTro = null)
         {
             var query = _context.NguoiDungs.AsQueryable();
 
@@ -109,6 +110,12 @@ namespace online_course_recommendation_system.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u => u.Ten.Contains(search) || u.Email.Contains(search));
+            }
+
+            // Lọc theo vai trò (HocVien, GiaoVien, Admin)
+            if (!string.IsNullOrWhiteSpace(vaiTro))
+            {
+                query = query.Where(u => u.VaiTro == vaiTro);
             }
 
             var totalCount = await query.CountAsync();
@@ -137,6 +144,24 @@ namespace online_course_recommendation_system.Controllers
                 pageSize,
                 totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
                 data = users
+            });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetAdminStats()
+        {
+            var totalUsers = await _context.NguoiDungs.CountAsync();
+            var students = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "HocVien");
+            var instructors = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "GiaoVien");
+            var admins = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "Admin");
+
+            return Ok(new
+            {
+                totalUsers,
+                students,
+                instructors,
+                admins
             });
         }
 
