@@ -1,4 +1,4 @@
-﻿using Neo4j.Driver;
+using Neo4j.Driver;
 using online_course_recommendation_system.Configurations;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Data;
@@ -41,6 +41,9 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+// Thêm Service Cloudinary
+builder.Services.AddScoped<online_course_recommendation_system.Service.ICloudinaryService, online_course_recommendation_system.Service.CloudinaryService>();
 
 // 1. Thêm các Controllers vào hệ thống
 builder.Services.AddControllers()
