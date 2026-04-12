@@ -44,7 +44,6 @@ namespace online_course_recommendation_system.Controllers
                 TongTien = 0,
                 PhuongThucThanhToan = request?.PhuongThucThanhToan ?? "Chuyển khoản",
                 TinhTrangThanhToan = true,
-                TinhTrangThanhToan = true,
                 NgayTao = DateTime.Now
             };
 

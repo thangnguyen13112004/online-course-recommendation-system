@@ -15,11 +15,13 @@ namespace online_course_recommendation_system.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly online_course_recommendation_system.Service.ICloudinaryService _cloudinaryService;
 
-        public InstructorController(AppDbContext context, IWebHostEnvironment env)
+        public InstructorController(AppDbContext context, IWebHostEnvironment env, online_course_recommendation_system.Service.ICloudinaryService cloudinaryService)
         {
             _context = context;
             _env = env;
+            _cloudinaryService = cloudinaryService;
         }
 
         // ① GET /api/instructor/courses — Khóa học của giảng viên
@@ -339,20 +341,13 @@ namespace online_course_recommendation_system.Controllers
             var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == lesson.MaChuongNavigation.MaKhoaHoc);
             if (!isOwner) return Forbid();
 
-            // Lưu file vào thư mục wwwroot/videos
-            var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "videos");
-            Directory.CreateDirectory(uploadsFolder); // Tạo thư mục nếu chưa có
+            // Lấy URL từ Cloudinary
+            var fileUrl = await _cloudinaryService.UploadVideoAsync(file);
+            if (string.IsNullOrEmpty(fileUrl))
+                return StatusCode(500, new { message = "Lỗi khi upload video lên server Cloudinary." });
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            // Lưu URL vào database (URL tương đối cho browser)
-            lesson.LinkVideo = "/videos/" + uniqueFileName;
+            // Lưu URL vào database
+            lesson.LinkVideo = fileUrl;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Upload video thành công.", linkVideo = lesson.LinkVideo });
@@ -374,18 +369,12 @@ namespace online_course_recommendation_system.Controllers
             var course = await _context.KhoaHocs.FindAsync(courseId);
             if (course == null) return NotFound("Khóa học không tồn tại.");
 
-            var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "images", "courses");
-            Directory.CreateDirectory(uploadsFolder);
+            // Lấy URL ảnh từ Cloudinary
+            var imageUrl = await _cloudinaryService.UploadImageAsync(file);
+            if (string.IsNullOrEmpty(imageUrl))
+                return StatusCode(500, new { message = "Lỗi khi upload ảnh lên server Cloudinary." });
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            course.AnhUrl = "/images/courses/" + uniqueFileName;
+            course.AnhUrl = imageUrl;
             course.NgayCapNhat = DateTime.Now;
             await _context.SaveChangesAsync();
 
