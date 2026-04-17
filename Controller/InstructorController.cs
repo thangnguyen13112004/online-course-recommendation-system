@@ -211,13 +211,54 @@ namespace online_course_recommendation_system.Controllers
             course.KiNang = request.KiNang;
             if (!string.IsNullOrEmpty(request.TinhTrang))
             {
-                course.TinhTrang = request.TinhTrang;
+                // Chỉ cho phép admin hoặc logic khác ngoài instructor controller này (hoặc nếu ta muốn cho phép ở đây)
+                // Tuy nhiên ta nên giới hạn instructor chỉ được set sang Draft hoặc Pending
+                if (request.TinhTrang == "Draft" || request.TinhTrang == "Pending")
+                {
+                    course.TinhTrang = request.TinhTrang;
+                }
             }
             course.NgayCapNhat = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật khóa học thành công." });
+        }
+
+        // ⑤.1 POST /api/instructor/courses/{id}/submit — Gửi khóa học duyệt
+        [HttpPost("courses/{id}/submit")]
+        public async Task<IActionResult> SubmitCourse(int id)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
+            if (!isOwner) return Forbid();
+
+            var course = await _context.KhoaHocs
+                .Include(k => k.Chuongs).ThenInclude(c => c.BaiHocs)
+                .FirstOrDefaultAsync(k => k.MaKhoaHoc == id);
+
+            if (course == null) return NotFound(new { message = "Không tìm thấy khóa học để gửi duyệt." });
+
+            if (course.TinhTrang != "Draft" && course.TinhTrang != "Rejected")
+            {
+                return BadRequest(new { message = "Chỉ có thể gửi duyệt khóa học đang ở trạng thái Nháp hoặc Bị từ chối." });
+            }
+
+            // Kiểm tra tối thiểu 1 chương và 1 bài học
+            bool hasContent = course.Chuongs != null && course.Chuongs.Any() && course.Chuongs.Any(c => c.BaiHocs != null && c.BaiHocs.Any());
+            
+            if (!hasContent)
+            {
+                return BadRequest(new { message = "Khóa học phải có ít nhất một chương và một bài học trước khi gửi duyệt. Vui lòng thêm nội dung cho khóa học của bạn." });
+            }
+
+            course.TinhTrang = "Pending";
+            course.NgayCapNhat = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã gửi khóa học duyệt thành công. Vui lòng chờ quản trị viên phê duyệt." });
         }
 
         // ⑥ POST /api/instructor/courses/{courseId}/chapters — Tạo chương mới
@@ -334,6 +375,45 @@ namespace online_course_recommendation_system.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Upload ảnh khóa học thành công.", anhUrl = course.AnhUrl });
+        }
+
+        // ⑩ DELETE /api/instructor/courses/{id} — Xóa khóa học (chỉ cho phép khi ở trạng thái Draft)
+        [HttpDelete("courses/{id}")]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null)
+                return Unauthorized(new { message = "Token không hợp lệ." });
+
+            // Kiểm tra quyền sở hữu
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
+            if (!isOwner) return Forbid();
+
+            var course = await _context.KhoaHocs
+                .Include(k => k.Chuongs)
+                    .ThenInclude(c => c.BaiHocs)
+                .Include(k => k.GiangVienKhoaHocs)
+                .FirstOrDefaultAsync(k => k.MaKhoaHoc == id);
+
+            if (course == null)
+                return NotFound(new { message = "Không tìm thấy khóa học." });
+
+            // Chỉ cho phép xóa khóa học ở trạng thái Draft
+            if (course.TinhTrang == "Published")
+                return BadRequest(new { message = "Không thể xóa khóa học đã xuất bản." });
+
+            // Xóa bài học → chương → liên kết giảng viên → khóa học
+            foreach (var chapter in course.Chuongs)
+            {
+                _context.BaiHocs.RemoveRange(chapter.BaiHocs);
+            }
+            _context.Chuongs.RemoveRange(course.Chuongs);
+            _context.GiangVienKhoaHocs.RemoveRange(course.GiangVienKhoaHocs);
+            _context.KhoaHocs.Remove(course);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xóa khóa học thành công." });
         }
 
         private int? GetUserIdFromToken()
