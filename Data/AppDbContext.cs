@@ -202,7 +202,6 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhuongThucThanhToan).HasMaxLength(100);
-            entity.Property(e => e.TinhTrangThanhToan).HasDefaultValue(false);
             entity.Property(e => e.TongTien).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.HoaDons)
@@ -316,7 +315,6 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhanTramTienDo).HasDefaultValue(0.0);
-            entity.Property(e => e.TinhTrang).HasDefaultValue(false);
 
             entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.TienDos)
                 .HasForeignKey(d => d.MaKhoaHoc)
