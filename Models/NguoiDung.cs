@@ -25,8 +25,6 @@ public partial class NguoiDung
 
     public virtual ICollection<ChungChi> ChungChis { get; set; } = new List<ChungChi>();
 
-    public virtual ICollection<CourseLike> CourseLikes { get; set; } = new List<CourseLike>();
-
     public virtual ICollection<DanhGium> DanhGia { get; set; } = new List<DanhGium>();
 
     public virtual ICollection<GiangVienKhoaHoc> GiangVienKhoaHocs { get; set; } = new List<GiangVienKhoaHoc>();
@@ -34,6 +32,8 @@ public partial class NguoiDung
     public virtual ICollection<GioHang> GioHangs { get; set; } = new List<GioHang>();
 
     public virtual ICollection<HoaDon> HoaDons { get; set; } = new List<HoaDon>();
+
+    public virtual ICollection<LuotThichKhoaHoc> LuotThichKhoaHocs { get; set; } = new List<LuotThichKhoaHoc>();
 
     public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
 }
