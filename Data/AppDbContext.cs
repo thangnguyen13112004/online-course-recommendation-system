@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Models;
@@ -49,6 +49,10 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<TienDoBaiHoc> TienDoBaiHocs { get; set; }
 
     public virtual DbSet<VwKhoaHocGiaThucTe> VwKhoaHocGiaThucTes { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=localhost;Database=ELearning_DB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -202,6 +206,7 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhuongThucThanhToan).HasMaxLength(100);
+            entity.Property(e => e.TinhTrangThanhToan).HasDefaultValue(false);
             entity.Property(e => e.TongTien).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.HoaDons)
@@ -315,6 +320,7 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhanTramTienDo).HasDefaultValue(0.0);
+            entity.Property(e => e.TinhTrang).HasDefaultValue(false);
 
             entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.TienDos)
                 .HasForeignKey(d => d.MaKhoaHoc)

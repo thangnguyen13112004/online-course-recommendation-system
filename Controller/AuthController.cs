@@ -40,7 +40,7 @@ namespace online_course_recommendation_system.Controllers
                 Email = request.Email,
                 MatKhau = HashPassword(request.MatKhau), // Mã hóa mật khẩu cho an toàn
                 VaiTro = "HocVien", // Mặc định khi đăng ký là Học viên
-                TinhTrang = "Hoạt động",
+                TinhTrang = "Active",
                 NgayTao = DateTime.Now
             };
 
@@ -63,7 +63,7 @@ namespace online_course_recommendation_system.Controllers
                 return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác." });
 
             // Khóa không cho User bị khóa đăng nhập
-            if (user.TinhTrang != "Hoạt động")
+            if (user.TinhTrang != "Active")
                 return Unauthorized(new { message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
 
             // Tạo chuỗi JWT Token
