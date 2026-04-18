@@ -85,17 +85,16 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            // Kiểm tra đã đăng ký chưa
             var tienDo = await _context.TienDos
                 .Include(t => t.TienDoBaiHocs)
                 .FirstOrDefaultAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == courseId);
 
             if (tienDo == null)
-                return Forbidden("Bạn chưa đăng ký khóa học này.");
+                return StatusCode(403, new { message = "Bạn chưa đăng ký khóa học này." });
 
             var completedLessonIds = tienDo.TienDoBaiHocs
-                .Where(tb => tb.DaHoanThanh == true)
-                .Select(tb => tb.MaBaiHoc)
+                .Where(x => x.DaHoanThanh == true)
+                .Select(x => x.MaBaiHoc)
                 .ToHashSet();
 
             var course = await _context.KhoaHocs
@@ -112,7 +111,7 @@ namespace online_course_recommendation_system.Controllers
             {
                 course.MaKhoaHoc,
                 course.TieuDe,
-                PhanTramTienDo = tienDo.PhanTramTienDo ?? 0,
+                PhanTramTienDo = tienDo.PhanTramTienDo,
                 GiangVien = course.GiangVienKhoaHocs
                     .Where(gv => gv.LaGiangVienChinh == true)
                     .Select(gv => gv.MaGiangVienNavigation?.Ten)
@@ -128,8 +127,8 @@ namespace online_course_recommendation_system.Controllers
                         b.LinkVideo,
                         b.BaiTap,
                         DaHoanThanh = completedLessonIds.Contains(b.MaBaiHoc)
-                    })
-                })
+                    }).ToList()
+                }).ToList()
             };
 
             return Ok(result);

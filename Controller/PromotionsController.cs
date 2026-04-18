@@ -171,5 +171,40 @@ namespace online_course_recommendation_system.Controllers
 
             return Ok(new { message = $"Đã xóa khuyến mãi '{promo.TenChuongTrinh}'." });
         }
+
+        // Thêm Endpoint này vào trong PromotionsController
+        [HttpPost("{id}/apply")]
+        public async Task<IActionResult> ApplyPromotion(int id, [FromBody] PromotionDto request)
+        {
+            var promo = await _context.KhuyenMais.FindAsync(id);
+            if (promo == null)
+                return NotFound(new { message = "Không tìm thấy khuyến mãi." });
+
+            // Lấy tất cả khóa học đang được áp dụng khuyến mãi này (để reset nếu cần)
+            var currentCourses = await _context.KhoaHocs.Where(k => k.MaKhuyenMai == id).ToListAsync();
+            foreach (var c in currentCourses)
+            {
+                c.MaKhuyenMai = null; // Tạm thời gỡ bỏ hết
+            }
+
+            // Tìm các khóa học mới cần áp dụng (theo ID khóa học HOẶC theo ID Thể loại)
+            var coursesToApply = await _context.KhoaHocs
+                .Where(k => request.CourseIds.Contains(k.MaKhoaHoc) || 
+                        (k.MaTheLoai.HasValue && request.CategoryIds.Contains(k.MaTheLoai.Value)))
+                .ToListAsync();
+
+            // Gắn khuyến mãi
+            foreach (var c in coursesToApply)
+            {
+                c.MaKhuyenMai = id;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = $"Đã áp dụng khuyến mãi cho {coursesToApply.Count} khóa học.",
+                appliedCount = coursesToApply.Count 
+            });
+        }
     }
 }
