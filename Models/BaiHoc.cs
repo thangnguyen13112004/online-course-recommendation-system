@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -14,6 +14,8 @@ public partial class BaiHoc
     public string? BaiTap { get; set; }
 
     public string? LyThuyet { get; set; }
+
+    public string? LinkTaiLieu { get; set; }
 
     public virtual Chuong? MaChuongNavigation { get; set; }
 

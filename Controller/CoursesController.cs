@@ -30,7 +30,7 @@ namespace online_course_recommendation_system.Controllers
                 .Include(k => k.MaTheLoaiNavigation)
                 .Include(k => k.GiangVienKhoaHocs).ThenInclude(g => g.MaGiangVienNavigation)
                 .Include(k => k.MaKhuyenMaiNavigation)
-                .Where(k => k.TinhTrang == "Published")
+                .Where(k => k.TinhTrang == "Published" && !k.IsDeleted)
                 .AsQueryable();
 
             // Tìm kiếm theo tiều đề
@@ -54,6 +54,7 @@ namespace online_course_recommendation_system.Controllers
                 "price_desc" => query.OrderByDescending(k => k.GiaGoc),
                 "rating" => query.OrderByDescending(k => k.TbdanhGia),
                 "newest" => query.OrderByDescending(k => k.NgayTao),
+                "revenue" => query.OrderByDescending(k => k.ChiTietHoaDons.Sum(c => c.Gia ?? 0)),
                 _ => query.OrderByDescending(k => k.NgayTao)
             };
 
@@ -115,7 +116,7 @@ namespace online_course_recommendation_system.Controllers
                 .Include(k => k.Chuongs).ThenInclude(c => c.BaiHocs)
                 .Include(k => k.DanhGia).ThenInclude(d => d.MaNguoiDungNavigation)
                 .Include(k => k.MaKhuyenMaiNavigation)
-                .Where(k => k.MaKhoaHoc == id)
+                .Where(k => k.MaKhoaHoc == id && !k.IsDeleted)
                 .Select(k => new
                 {
                     k.MaKhoaHoc,
@@ -259,18 +260,26 @@ namespace online_course_recommendation_system.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
             [FromQuery] string? search = null,
-            [FromQuery] string? status = null)
+            [FromQuery] string? status = null,
+            [FromQuery] string? sortBy = null)
         {
             var query = _context.KhoaHocs
                 .Include(k => k.MaTheLoaiNavigation)
                 .Include(k => k.GiangVienKhoaHocs).ThenInclude(g => g.MaGiangVienNavigation)
                 .Include(k => k.MaKhuyenMaiNavigation)
+                .Include(k => k.ChiTietHoaDons)
+                .Where(k => !k.IsDeleted)
                 .AsQueryable();
 
             // Filter theo trạng thái
             if (!string.IsNullOrWhiteSpace(status))
             {
                 query = query.Where(k => k.TinhTrang == status);
+            }
+            else
+            {
+                // Mặc định tab Tất cả không lấy các khóa học Nháp
+                query = query.Where(k => k.TinhTrang != "Draft");
             }
 
             // Tìm kiếm theo tiêu đề
@@ -281,8 +290,17 @@ namespace online_course_recommendation_system.Controllers
 
             var totalCount = await query.CountAsync();
 
+            query = sortBy switch
+            {
+                "price_asc" => query.OrderBy(k => k.GiaGoc),
+                "price_desc" => query.OrderByDescending(k => k.GiaGoc),
+                "rating" => query.OrderByDescending(k => k.TbdanhGia),
+                "revenue" => query.OrderByDescending(k => k.ChiTietHoaDons.Sum(c => c.Gia ?? 0)),
+                "newest" => query.OrderByDescending(k => k.NgayTao),
+                _ => query.OrderByDescending(k => k.NgayTao)
+            };
+
             var courses = await query
-                .OrderByDescending(k => k.NgayTao)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(k => new
@@ -307,7 +325,9 @@ namespace online_course_recommendation_system.Controllers
                         gv.LaGiangVienChinh
                     }),
                     SoLuongChuong = k.Chuongs.Count,
-                    SoHocVien = k.TienDos.Count
+                    SoHocVien = k.TienDos.Count,
+                    DoanhThu = k.ChiTietHoaDons.Sum(c => c.Gia ?? 0),
+                    AdminRevenue = k.ChiTietHoaDons.Sum(c => c.Gia ?? 0) * 0.3m
                 })
                 .ToListAsync();
 
@@ -332,6 +352,27 @@ namespace online_course_recommendation_system.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Đã cập nhật trạng thái khóa học '{course.TieuDe}' thành '{request.TinhTrang}'." });
+        }
+
+        // ⑦ GET /api/courses/{id}/announcements — Lấy danh sách thông báo (Public/Student)
+        [HttpGet("{id}/announcements")]
+        public async Task<IActionResult> GetAnnouncements(int id)
+        {
+            var courseExists = await _context.KhoaHocs.AnyAsync(k => k.MaKhoaHoc == id);
+            if (!courseExists) return NotFound("Khóa học không tồn tại.");
+
+            var announcements = await _context.ThongBaoKhoaHocs
+                .Where(t => t.MaKhoaHoc == id)
+                .OrderByDescending(t => t.NgayTao)
+                .Select(t => new {
+                    t.MaThongBao,
+                    t.TieuDe,
+                    t.NoiDung,
+                    t.NgayTao
+                })
+                .ToListAsync();
+
+            return Ok(announcements);
         }
     }
 
