@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -31,6 +31,8 @@ public partial class KhoaHoc
 
     public int? MaKhuyenMai { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; } = new List<ChiTietGioHang>();
 
     public virtual ICollection<ChiTietHoaDon> ChiTietHoaDons { get; set; } = new List<ChiTietHoaDon>();
@@ -50,4 +52,6 @@ public partial class KhoaHoc
     public virtual TheLoai? MaTheLoaiNavigation { get; set; }
 
     public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
+
+    public virtual ICollection<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; } = new List<ThongBaoKhoaHoc>();
 }

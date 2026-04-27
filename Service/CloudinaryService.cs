@@ -1,9 +1,5 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Threading.Tasks;
 
 namespace online_course_recommendation_system.Service
 {
@@ -21,43 +17,46 @@ namespace online_course_recommendation_system.Service
             _cloudinary = new Cloudinary(acc);
         }
 
-        public async Task<string> UploadImageAsync(IFormFile file)
+        public async Task<string?> UploadFileAsync(IFormFile file, string folder)
         {
-            var uploadResult = new ImageUploadResult();
+            if (file == null || file.Length == 0) return null;
 
-            if (file.Length > 0)
+            var extension = Path.GetExtension(file.FileName).ToLower();
+
+            // Handle images vs other files (PDFs, Videos)
+            if (extension == ".pdf" || extension == ".doc" || extension == ".docx" || extension == ".zip" || extension == ".rar")
             {
-                using var stream = file.OpenReadStream();
-                var uploadParams = new ImageUploadParams
+                var uploadParams = new RawUploadParams()
                 {
-                    File = new FileDescription(file.FileName, stream),
-                    Folder = "courses",
-                    Transformation = new Transformation().Quality("auto").FetchFormat("auto")
+                    File = new FileDescription(file.FileName, file.OpenReadStream()),
+                    Folder = folder
                 };
 
-                uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                return uploadResult?.SecureUrl?.ToString();
             }
-
-            return uploadResult.SecureUrl?.ToString() ?? string.Empty;
-        }
-
-        public async Task<string> UploadVideoAsync(IFormFile file)
-        {
-            var uploadResult = new VideoUploadResult();
-
-            if (file.Length > 0)
+            else if (extension == ".mp4" || extension == ".mov" || extension == ".avi" || extension == ".webm" || extension == ".mkv")
             {
-                using var stream = file.OpenReadStream();
-                var uploadParams = new VideoUploadParams
+                var uploadParams = new VideoUploadParams()
                 {
-                    File = new FileDescription(file.FileName, stream),
-                    Folder = "lessons"
+                    File = new FileDescription(file.FileName, file.OpenReadStream()),
+                    Folder = folder
                 };
 
-                uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                return uploadResult?.SecureUrl?.ToString();
             }
+            else
+            {
+                var uploadParams = new ImageUploadParams()
+                {
+                    File = new FileDescription(file.FileName, file.OpenReadStream()),
+                    Folder = folder
+                };
 
-            return uploadResult.SecureUrl?.ToString() ?? string.Empty;
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                return uploadResult?.SecureUrl?.ToString();
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ using online_course_recommendation_system.Data;
 using online_course_recommendation_system.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using online_course_recommendation_system.Service;
 
 namespace online_course_recommendation_system.Controllers
 {
@@ -15,9 +16,9 @@ namespace online_course_recommendation_system.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly online_course_recommendation_system.Service.ICloudinaryService _cloudinaryService;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public InstructorController(AppDbContext context, IWebHostEnvironment env, online_course_recommendation_system.Service.ICloudinaryService cloudinaryService)
+        public InstructorController(AppDbContext context, IWebHostEnvironment env, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _env = env;
@@ -33,7 +34,7 @@ namespace online_course_recommendation_system.Controllers
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
             var courses = await _context.GiangVienKhoaHocs
-                .Where(gv => gv.MaGiangVien == userId.Value)
+                .Where(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHocNavigation.IsDeleted == false)
                 .Include(gv => gv.MaKhoaHocNavigation)
                     .ThenInclude(k => k.MaTheLoaiNavigation)
                 .Include(gv => gv.MaKhoaHocNavigation)
@@ -135,9 +136,11 @@ namespace online_course_recommendation_system.Controllers
                 .Where(d => d.MaKhoaHoc.HasValue && courseIds.Contains(d.MaKhoaHoc.Value) && d.Rating.HasValue)
                 .AverageAsync(d => (double?)d.Rating) ?? 0;
 
-            var tongDoanhThu = await _context.ChiTietHoaDons
+            var tongDoanhThuRaw = await _context.ChiTietHoaDons
                 .Where(ct => ct.MaKhoaHoc.HasValue && courseIds.Contains(ct.MaKhoaHoc.Value))
                 .SumAsync(ct => ct.Gia ?? 0);
+            
+            var tongDoanhThu = tongDoanhThuRaw * 0.7m; // Giảng viên nhận 70%
 
             var tongDanhGia = await _context.DanhGia
                 .Where(d => d.MaKhoaHoc.HasValue && courseIds.Contains(d.MaKhoaHoc.Value))
@@ -255,27 +258,62 @@ namespace online_course_recommendation_system.Controllers
                 var course = await _context.KhoaHocs.FindAsync(id);
                 if (course == null) return NotFound(new { message = "Không tìm thấy khóa học." });
 
-                course.TieuDe = request.TieuDe;
-                course.TieuDePhu = request.TieuDePhu;
-                course.MoTa = request.MoTa;
-                course.GiaGoc = request.GiaGoc;
-                course.MaTheLoai = request.MaTheLoai;
-                course.KiNang = request.KiNang;
-                if (!string.IsNullOrEmpty(request.TinhTrang))
+            course.TieuDe = request.TieuDe;
+            course.TieuDePhu = request.TieuDePhu;
+            course.MoTa = request.MoTa;
+            course.GiaGoc = request.GiaGoc;
+            course.MaTheLoai = request.MaTheLoai;
+            course.KiNang = request.KiNang;
+            if (!string.IsNullOrEmpty(request.TinhTrang))
+            {
+                // Chỉ cho phép admin hoặc logic khác ngoài instructor controller này (hoặc nếu ta muốn cho phép ở đây)
+                // Tuy nhiên ta nên giới hạn instructor chỉ được set sang Draft hoặc Pending
+                if (request.TinhTrang == "Draft" || request.TinhTrang == "Pending")
                 {
                     course.TinhTrang = request.TinhTrang;
                 }
-                course.NgayCapNhat = DateTime.Now;
+            }
+            course.NgayCapNhat = DateTime.Now;
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Cập nhật khóa học thành công." });
-            }
-            catch (Exception ex)
+            return Ok(new { message = "Cập nhật khóa học thành công." });
+        }
+
+        // ⑤.1 POST /api/instructor/courses/{id}/submit — Gửi khóa học duyệt
+        [HttpPost("courses/{id}/submit")]
+        public async Task<IActionResult> SubmitCourse(int id)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
+            if (!isOwner) return Forbid();
+
+            var course = await _context.KhoaHocs
+                .Include(k => k.Chuongs).ThenInclude(c => c.BaiHocs)
+                .FirstOrDefaultAsync(k => k.MaKhoaHoc == id);
+
+            if (course == null) return NotFound(new { message = "Không tìm thấy khóa học để gửi duyệt." });
+
+            if (course.TinhTrang != "Draft" && course.TinhTrang != "Rejected")
             {
-                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : "";
-                return StatusCode(500, new { message = $"Error: {ex.Message}. Inner: {innerMessage}" });
+                return BadRequest(new { message = "Chỉ có thể gửi duyệt khóa học đang ở trạng thái Nháp hoặc Bị từ chối." });
             }
+
+            // Kiểm tra tối thiểu 1 chương và 1 bài học
+            bool hasContent = course.Chuongs != null && course.Chuongs.Any() && course.Chuongs.Any(c => c.BaiHocs != null && c.BaiHocs.Any());
+            
+            if (!hasContent)
+            {
+                return BadRequest(new { message = "Khóa học phải có ít nhất một chương và một bài học trước khi gửi duyệt. Vui lòng thêm nội dung cho khóa học của bạn." });
+            }
+
+            course.TinhTrang = "Pending";
+            course.NgayCapNhat = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã gửi khóa học duyệt thành công. Vui lòng chờ quản trị viên phê duyệt." });
         }
 
         // ⑥ POST /api/instructor/courses/{courseId}/chapters — Tạo chương mới
@@ -341,13 +379,11 @@ namespace online_course_recommendation_system.Controllers
             var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == lesson.MaChuongNavigation.MaKhoaHoc);
             if (!isOwner) return Forbid();
 
-            // Lấy URL từ Cloudinary
-            var fileUrl = await _cloudinaryService.UploadVideoAsync(file);
-            if (string.IsNullOrEmpty(fileUrl))
-                return StatusCode(500, new { message = "Lỗi khi upload video lên server Cloudinary." });
+            var uploadResult = await _cloudinaryService.UploadFileAsync(file, "courses/videos");
+            if (string.IsNullOrEmpty(uploadResult))
+                return BadRequest(new { message = "Lỗi khi upload video lên Cloudinary." });
 
-            // Lưu URL vào database
-            lesson.LinkVideo = fileUrl;
+            lesson.LinkVideo = uploadResult;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Upload video thành công.", linkVideo = lesson.LinkVideo });
@@ -369,16 +405,137 @@ namespace online_course_recommendation_system.Controllers
             var course = await _context.KhoaHocs.FindAsync(courseId);
             if (course == null) return NotFound("Khóa học không tồn tại.");
 
-            // Lấy URL ảnh từ Cloudinary
-            var imageUrl = await _cloudinaryService.UploadImageAsync(file);
-            if (string.IsNullOrEmpty(imageUrl))
-                return StatusCode(500, new { message = "Lỗi khi upload ảnh lên server Cloudinary." });
+            var uploadResult = await _cloudinaryService.UploadFileAsync(file, "courses/covers");
+            if (string.IsNullOrEmpty(uploadResult))
+                return BadRequest(new { message = "Lỗi khi upload ảnh lên Cloudinary." });
 
-            course.AnhUrl = imageUrl;
+            course.AnhUrl = uploadResult;
             course.NgayCapNhat = DateTime.Now;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Upload ảnh khóa học thành công.", anhUrl = course.AnhUrl });
+        }
+
+        // ⑩ POST /api/instructor/lessons/{lessonId}/pdf — Upload PDF cho bài học
+        [HttpPost("lessons/{lessonId}/pdf")]
+        public async Task<IActionResult> UploadPdf(int lessonId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Vui lòng chọn file PDF.");
+
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var lesson = await _context.BaiHocs.Include(b => b.MaChuongNavigation).FirstOrDefaultAsync(b => b.MaBaiHoc == lessonId);
+            if (lesson == null || lesson.MaChuongNavigation == null) return NotFound("Bài học không tồn tại.");
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == lesson.MaChuongNavigation.MaKhoaHoc);
+            if (!isOwner) return Forbid();
+
+            var uploadResult = await _cloudinaryService.UploadFileAsync(file, "courses/documents");
+            if (string.IsNullOrEmpty(uploadResult))
+                return BadRequest(new { message = "Lỗi khi upload PDF lên Cloudinary." });
+
+            lesson.LinkTaiLieu = uploadResult;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Upload tài liệu thành công.", linkTaiLieu = lesson.LinkTaiLieu });
+        }
+
+        // ⑪ GET /api/instructor/courses/{courseId}/announcements — Lấy danh sách thông báo
+        [HttpGet("courses/{courseId}/announcements")]
+        public async Task<IActionResult> GetAnnouncements(int courseId)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == courseId);
+            if (!isOwner) return Forbid();
+
+            var list = await _context.ThongBaoKhoaHocs
+                .Where(t => t.MaKhoaHoc == courseId)
+                .OrderByDescending(t => t.NgayTao)
+                .Select(t => new { t.MaThongBao, t.TieuDe, t.NoiDung, t.NgayTao })
+                .ToListAsync();
+
+            return Ok(list);
+        }
+
+        // ⑫ POST /api/instructor/courses/{courseId}/announcements — Tạo thông báo mới
+        [HttpPost("courses/{courseId}/announcements")]
+        public async Task<IActionResult> CreateAnnouncement(int courseId, [FromBody] CreateAnnouncementRequest request)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == courseId);
+            if (!isOwner) return Forbid();
+
+            var tb = new ThongBaoKhoaHoc
+            {
+                MaKhoaHoc = courseId,
+                TieuDe = request.TieuDe,
+                NoiDung = request.NoiDung,
+                NgayTao = DateTime.Now
+            };
+
+            _context.ThongBaoKhoaHocs.Add(tb);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tạo thông báo thành công.", id = tb.MaThongBao });
+        }
+
+        // ⑬ DELETE /api/instructor/announcements/{id} — Xóa thông báo
+        [HttpDelete("announcements/{id}")]
+        public async Task<IActionResult> DeleteAnnouncement(int id)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized();
+
+            var tb = await _context.ThongBaoKhoaHocs.FindAsync(id);
+            if (tb == null) return NotFound("Thông báo không tồn tại.");
+
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == tb.MaKhoaHoc);
+            if (!isOwner) return Forbid();
+
+            _context.ThongBaoKhoaHocs.Remove(tb);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã xóa thông báo." });
+        }
+
+        // ⑩ DELETE /api/instructor/courses/{id} — Xóa khóa học (chỉ cho phép khi ở trạng thái Draft)
+        [HttpDelete("courses/{id}")]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            var userId = GetUserIdFromToken();
+            if (userId == null)
+                return Unauthorized(new { message = "Token không hợp lệ." });
+
+            // Kiểm tra quyền sở hữu
+            var isOwner = await _context.GiangVienKhoaHocs.AnyAsync(gv => gv.MaGiangVien == userId.Value && gv.MaKhoaHoc == id);
+            if (!isOwner) return Forbid();
+
+            var course = await _context.KhoaHocs
+                .Include(k => k.Chuongs)
+                    .ThenInclude(c => c.BaiHocs)
+                .Include(k => k.GiangVienKhoaHocs)
+                .FirstOrDefaultAsync(k => k.MaKhoaHoc == id);
+
+            if (course == null)
+                return NotFound(new { message = "Không tìm thấy khóa học." });
+
+            // Chỉ cho phép xóa khóa học ở trạng thái Draft
+            if (course.TinhTrang == "Published")
+                return BadRequest(new { message = "Không thể xóa khóa học đã xuất bản." });
+
+            // Soft Delete thay vì Hard Delete
+            course.IsDeleted = true;
+            course.NgayCapNhat = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xóa khóa học thành công." });
         }
 
         private int? GetUserIdFromToken()
@@ -414,5 +571,12 @@ namespace online_course_recommendation_system.Controllers
     {
         public string? LyThuyet { get; set; }
         public string? BaiTap { get; set; }
+        public string? LinkTaiLieu { get; set; }
+    }
+
+    public class CreateAnnouncementRequest
+    {
+        public string TieuDe { get; set; } = null!;
+        public string NoiDung { get; set; } = null!;
     }
 }

@@ -77,7 +77,7 @@ namespace online_course_recommendation_system.Controllers
                             MaNguoiDung = userId.Value,
                             MaKhoaHoc = item.MaKhoaHoc,
                             PhanTramTienDo = 0,
-                            TinhTrang = false,
+                            TinhTrang = true,
                             NgayThamGia = DateTime.Now
                         });
                     }
