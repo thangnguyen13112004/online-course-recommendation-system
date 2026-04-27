@@ -129,7 +129,7 @@ namespace online_course_recommendation_system.Controllers
                     h.MaHoaDon,
                     h.TongTien,
                     h.PhuongThucThanhToan,
-                    TinhTrangThanhToan = h.TinhTrangThanhToan == true ? "Đã thanh toán" : "Thất bại",
+                    TinhTrangThanhToan = h.TinhTrangThanhToan == true ? "Đã thanh toán" : "Chờ thanh toán",
                     h.NgayTao,
                     ChiTiet = h.ChiTietHoaDons.Select(ct => new
                     {

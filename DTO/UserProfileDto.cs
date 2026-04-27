@@ -10,4 +10,5 @@ public class UserProfileDto
     public string? TieuSu { get; set; }
     public string? TinhTrang { get; set; }
     public DateTime? NgayTao { get; set; }
+    public string? HoSoBangCap { get; set; }
 }
