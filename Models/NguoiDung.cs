@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -22,6 +22,8 @@ public partial class NguoiDung
     public string? TinhTrang { get; set; }
 
     public DateTime? NgayTao { get; set; }
+
+    public string? HoSoBangCap { get; set; }
 
     public virtual ICollection<ChungChi> ChungChis { get; set; } = new List<ChungChi>();
 
