@@ -17,21 +17,55 @@ namespace online_course_recommendation_system.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
+        private readonly online_course_recommendation_system.Service.ICloudinaryService _cloudinaryService;
 
         // Tiêm AppDbContext để tương tác DB và IConfiguration để lấy cấu hình từ appsettings.json
-        public AuthController(AppDbContext context, IConfiguration configuration)
+        public AuthController(AppDbContext context, IConfiguration configuration, IWebHostEnvironment env, online_course_recommendation_system.Service.ICloudinaryService cloudinaryService)
         {
             _context = context;
             _configuration = configuration;
+            _env = env;
+            _cloudinaryService = cloudinaryService;
         }
 
         // --- API ĐĂNG KÝ ---
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto request)
+        public async Task<IActionResult> Register([FromForm] RegisterDto request)
         {
             // Kiểm tra xem email đã tồn tại dưới Database chưa
             if (await _context.NguoiDungs.AnyAsync(u => u.Email == request.Email))
                 return BadRequest(new { message = "Email này đã được sử dụng!" });
+
+            var vaiTro = request.VaiTro == "instructor" || request.VaiTro == "GiaoVien" ? "GiaoVien" : "HocVien";
+            var tinhTrang = vaiTro == "GiaoVien" ? "Chờ duyệt" : "Hoạt động";
+            
+            string? degreeUrl = null;
+
+            if (request.File != null && vaiTro == "GiaoVien")
+            {
+                // Kiểm tra định dạng
+                var extension = Path.GetExtension(request.File.FileName).ToLower();
+                var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return BadRequest(new { message = "Chỉ chấp nhận file PDF hoặc hình ảnh (JPG, PNG)." });
+                }
+
+                // Giới hạn kích thước (vd 5MB)
+                if (request.File.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new { message = "Kích thước file không được vượt quá 5MB." });
+                }
+
+                // Upload lên Cloudinary
+                degreeUrl = await _cloudinaryService.UploadFileAsync(request.File, "degrees");
+                
+                if (string.IsNullOrEmpty(degreeUrl))
+                {
+                    return BadRequest(new { message = "Lỗi khi tải lên Cloudinary." });
+                }
+            }
 
             // Tạo Object NguoiDung mới dựa theo Models/NguoiDung.cs
             var user = new NguoiDung
@@ -39,8 +73,9 @@ namespace online_course_recommendation_system.Controllers
                 Ten = request.Ten,
                 Email = request.Email,
                 MatKhau = HashPassword(request.MatKhau), // Mã hóa mật khẩu cho an toàn
-                VaiTro = "HocVien", // Mặc định khi đăng ký là Học viên
-                TinhTrang = "Active",
+                VaiTro = vaiTro, 
+                TinhTrang = tinhTrang,
+                HoSoBangCap = degreeUrl,
                 NgayTao = DateTime.Now
             };
 
@@ -62,8 +97,14 @@ namespace online_course_recommendation_system.Controllers
             if (user == null || user.MatKhau != HashPassword(request.MatKhau))
                 return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác." });
 
+            if (user.TinhTrang == "Chờ duyệt")
+                return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin duyệt hồ sơ. Vui lòng thử lại sau." });
+
+            if (user.TinhTrang == "Từ chối")
+                return Unauthorized(new { message = "Hồ sơ của bạn đã bị từ chối. Vui lòng liên hệ Admin." });
+
             // Khóa không cho User bị khóa đăng nhập
-            if (user.TinhTrang != "Active")
+            if (user.TinhTrang != "Hoạt động" && user.TinhTrang != "Active")
                 return Unauthorized(new { message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
 
             // Tạo chuỗi JWT Token
@@ -75,7 +116,8 @@ namespace online_course_recommendation_system.Controllers
                 token = token,
                 role = user.VaiTro,
                 userId = user.MaNguoiDung,
-                userName = user.Ten
+                userName = user.Ten,
+                status = user.TinhTrang
             });
         }
 

@@ -44,6 +44,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<TheLoai> TheLoais { get; set; }
 
+    public virtual DbSet<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; }
+
     public virtual DbSet<TienDo> TienDos { get; set; }
 
     public virtual DbSet<TienDoBaiHoc> TienDoBaiHocs { get; set; }
@@ -62,6 +64,9 @@ public partial class AppDbContext : DbContext
 
             entity.ToTable("BaiHoc");
 
+            entity.Property(e => e.LinkTaiLieu)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
             entity.Property(e => e.LinkVideo).IsUnicode(false);
 
             entity.HasOne(d => d.MaChuongNavigation).WithMany(p => p.BaiHocs)
@@ -308,6 +313,22 @@ public partial class AppDbContext : DbContext
             entity.ToTable("TheLoai");
 
             entity.Property(e => e.Ten).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<ThongBaoKhoaHoc>(entity =>
+        {
+            entity.HasKey(e => e.MaThongBao).HasName("PK__ThongBao__04DEB54E057E25CB");
+
+            entity.ToTable("ThongBaoKhoaHoc");
+
+            entity.Property(e => e.NgayTao)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.TieuDe).HasMaxLength(255);
+
+            entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.ThongBaoKhoaHocs)
+                .HasForeignKey(d => d.MaKhoaHoc)
+                .HasConstraintName("FK__ThongBaoK__MaKho__2B0A656D");
         });
 
         modelBuilder.Entity<TienDo>(entity =>

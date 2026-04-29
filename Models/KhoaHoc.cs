@@ -31,6 +31,8 @@ public partial class KhoaHoc
 
     public int? MaKhuyenMai { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; } = new List<ChiTietGioHang>();
 
     public virtual ICollection<ChiTietHoaDon> ChiTietHoaDons { get; set; } = new List<ChiTietHoaDon>();
@@ -48,6 +50,8 @@ public partial class KhoaHoc
     public virtual KhuyenMai? MaKhuyenMaiNavigation { get; set; }
 
     public virtual TheLoai? MaTheLoaiNavigation { get; set; }
+
+    public virtual ICollection<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; } = new List<ThongBaoKhoaHoc>();
 
     public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
 }

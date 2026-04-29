@@ -15,6 +15,8 @@ public partial class BaiHoc
 
     public string? LyThuyet { get; set; }
 
+    public string? LinkTaiLieu { get; set; }
+
     public virtual Chuong? MaChuongNavigation { get; set; }
 
     public virtual ICollection<TienDoBaiHoc> TienDoBaiHocs { get; set; } = new List<TienDoBaiHoc>();

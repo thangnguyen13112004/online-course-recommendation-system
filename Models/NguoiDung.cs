@@ -23,6 +23,8 @@ public partial class NguoiDung
 
     public DateTime? NgayTao { get; set; }
 
+    public string? HoSoBangCap { get; set; }
+
     public virtual ICollection<ChungChi> ChungChis { get; set; } = new List<ChungChi>();
 
     public virtual ICollection<DanhGium> DanhGia { get; set; } = new List<DanhGium>();
