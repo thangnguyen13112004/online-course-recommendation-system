@@ -275,9 +275,14 @@ namespace online_course_recommendation_system.Controllers
             }
             course.NgayCapNhat = DateTime.Now;
 
-                await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật khóa học thành công." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error: {ex.Message}" });
+            }
         }
 
         // ⑤.1 POST /api/instructor/courses/{id}/submit — Gửi khóa học duyệt

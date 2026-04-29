@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Models;
@@ -44,13 +44,17 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<TheLoai> TheLoais { get; set; }
 
+    public virtual DbSet<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; }
+
     public virtual DbSet<TienDo> TienDos { get; set; }
 
     public virtual DbSet<TienDoBaiHoc> TienDoBaiHocs { get; set; }
 
     public virtual DbSet<VwKhoaHocGiaThucTe> VwKhoaHocGiaThucTes { get; set; }
 
-    public virtual DbSet<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=localhost;Database=ELearning_DB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +64,9 @@ public partial class AppDbContext : DbContext
 
             entity.ToTable("BaiHoc");
 
+            entity.Property(e => e.LinkTaiLieu)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
             entity.Property(e => e.LinkVideo).IsUnicode(false);
 
             entity.HasOne(d => d.MaChuongNavigation).WithMany(p => p.BaiHocs)
@@ -308,6 +315,22 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Ten).HasMaxLength(100);
         });
 
+        modelBuilder.Entity<ThongBaoKhoaHoc>(entity =>
+        {
+            entity.HasKey(e => e.MaThongBao).HasName("PK__ThongBao__04DEB54E057E25CB");
+
+            entity.ToTable("ThongBaoKhoaHoc");
+
+            entity.Property(e => e.NgayTao)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.TieuDe).HasMaxLength(255);
+
+            entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.ThongBaoKhoaHocs)
+                .HasForeignKey(d => d.MaKhoaHoc)
+                .HasConstraintName("FK__ThongBaoK__MaKho__2B0A656D");
+        });
+
         modelBuilder.Entity<TienDo>(entity =>
         {
             entity.HasKey(e => e.MaTienDo).HasName("PK__TienDo__C5D04CAEAAF35E0B");
@@ -345,22 +368,6 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.MaTienDoNavigation).WithMany(p => p.TienDoBaiHocs)
                 .HasForeignKey(d => d.MaTienDo)
                 .HasConstraintName("FK__TienDoBai__MaTie__7C4F7684");
-        });
-
-        modelBuilder.Entity<ThongBaoKhoaHoc>(entity =>
-        {
-            entity.HasKey(e => e.MaThongBao).HasName("PK_ThongBaoKhoaHoc");
-
-            entity.ToTable("ThongBaoKhoaHoc");
-
-            entity.Property(e => e.TieuDe).HasMaxLength(255);
-            entity.Property(e => e.NgayTao)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-
-            entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.ThongBaoKhoaHocs)
-                .HasForeignKey(d => d.MaKhoaHoc)
-                .HasConstraintName("FK_ThongBaoKhoaHoc_KhoaHoc");
         });
 
         modelBuilder.Entity<VwKhoaHocGiaThucTe>(entity =>

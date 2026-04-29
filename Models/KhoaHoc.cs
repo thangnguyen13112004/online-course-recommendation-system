@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -51,7 +51,7 @@ public partial class KhoaHoc
 
     public virtual TheLoai? MaTheLoaiNavigation { get; set; }
 
-    public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
-
     public virtual ICollection<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; } = new List<ThongBaoKhoaHoc>();
+
+    public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
 }
