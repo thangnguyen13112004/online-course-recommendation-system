@@ -38,4 +38,6 @@ public partial class NguoiDung
     public virtual ICollection<LuotThichKhoaHoc> LuotThichKhoaHocs { get; set; } = new List<LuotThichKhoaHoc>();
 
     public virtual ICollection<TienDo> TienDos { get; set; } = new List<TienDo>();
+
+    public virtual ICollection<ThongBao> ThongBaos { get; set; } = new List<ThongBao>();
 }
