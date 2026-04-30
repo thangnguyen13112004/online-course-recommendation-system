@@ -51,6 +51,7 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<VwKhoaHocGiaThucTe> VwKhoaHocGiaThucTes { get; set; }
 
     public virtual DbSet<ThongBao> ThongBaos { get; set; }
+    public virtual DbSet<ThongBaoKhoaHoc> ThongBaoKhoaHocs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -204,6 +205,7 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.PhuongThucThanhToan).HasMaxLength(100);
+            entity.Property(e => e.TinhTrangThanhToan).HasDefaultValue(false);
             entity.Property(e => e.TongTien).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.HoaDons)
@@ -318,6 +320,7 @@ public partial class AppDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.NgayKetThuc).HasColumnType("datetime");
             entity.Property(e => e.PhanTramTienDo).HasDefaultValue(0.0);
+            entity.Property(e => e.TinhTrang).HasDefaultValue(false);
 
             entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.TienDos)
                 .HasForeignKey(d => d.MaKhoaHoc)
@@ -361,6 +364,22 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.MaTienDoNavigation).WithMany(p => p.TienDoBaiHocs)
                 .HasForeignKey(d => d.MaTienDo)
                 .HasConstraintName("FK__TienDoBai__MaTie__7C4F7684");
+        });
+
+        modelBuilder.Entity<ThongBaoKhoaHoc>(entity =>
+        {
+            entity.HasKey(e => e.MaThongBao).HasName("PK_ThongBaoKhoaHoc");
+
+            entity.ToTable("ThongBaoKhoaHoc");
+
+            entity.Property(e => e.TieuDe).HasMaxLength(255);
+            entity.Property(e => e.NgayTao)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.ThongBaoKhoaHocs)
+                .HasForeignKey(d => d.MaKhoaHoc)
+                .HasConstraintName("FK_ThongBaoKhoaHoc_KhoaHoc");
         });
 
         modelBuilder.Entity<VwKhoaHocGiaThucTe>(entity =>

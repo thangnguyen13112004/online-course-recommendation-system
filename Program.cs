@@ -1,4 +1,5 @@
 using Neo4j.Driver;
+
 using online_course_recommendation_system.Configurations;
 using Microsoft.EntityFrameworkCore;
 using online_course_recommendation_system.Data;
@@ -14,6 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Đăng ký EF Core kết nối SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
 
 // bind config
 builder.Services.Configure<Neo4jSettings>(
@@ -51,6 +54,9 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+// Thêm Service Cloudinary
+builder.Services.AddScoped<online_course_recommendation_system.Service.ICloudinaryService, online_course_recommendation_system.Service.CloudinaryService>();
 
 // 1. Thêm các Controllers vào hệ thống
 builder.Services.AddControllers()
@@ -122,6 +128,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
     });
 }
 
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 app.UseAuthentication();

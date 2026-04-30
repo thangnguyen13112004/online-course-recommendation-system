@@ -85,17 +85,16 @@ namespace online_course_recommendation_system.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Token không hợp lệ." });
 
-            // Kiểm tra đã đăng ký chưa
             var tienDo = await _context.TienDos
                 .Include(t => t.TienDoBaiHocs)
                 .FirstOrDefaultAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == courseId);
 
             if (tienDo == null)
-                return Forbidden("Bạn chưa đăng ký khóa học này.");
+                return StatusCode(403, new { message = "Bạn chưa đăng ký khóa học này." });
 
             var completedLessonIds = tienDo.TienDoBaiHocs
-                .Where(tb => tb.DaHoanThanh == true)
-                .Select(tb => tb.MaBaiHoc)
+                .Where(x => x.DaHoanThanh == true)
+                .Select(x => x.MaBaiHoc)
                 .ToHashSet();
 
             var course = await _context.KhoaHocs
@@ -112,7 +111,7 @@ namespace online_course_recommendation_system.Controllers
             {
                 course.MaKhoaHoc,
                 course.TieuDe,
-                PhanTramTienDo = tienDo.PhanTramTienDo ?? 0,
+                PhanTramTienDo = tienDo.PhanTramTienDo,
                 GiangVien = course.GiangVienKhoaHocs
                     .Where(gv => gv.LaGiangVienChinh == true)
                     .Select(gv => gv.MaGiangVienNavigation?.Ten)
@@ -126,10 +125,11 @@ namespace online_course_recommendation_system.Controllers
                         b.MaBaiHoc,
                         b.LyThuyet,
                         b.LinkVideo,
+                        b.LinkTaiLieu,
                         b.BaiTap,
                         DaHoanThanh = completedLessonIds.Contains(b.MaBaiHoc)
-                    })
-                })
+                    }).ToList()
+                }).ToList()
             };
 
             return Ok(result);
@@ -139,82 +139,106 @@ namespace online_course_recommendation_system.Controllers
         [HttpPost("lesson/{lessonId}/complete")]
         public async Task<IActionResult> CompleteLesson(int lessonId)
         {
-            var userId = GetUserIdFromToken();
-            if (userId == null)
-                return Unauthorized(new { message = "Token không hợp lệ." });
-
-            // Tìm bài học
-            var lesson = await _context.BaiHocs
-                .Include(b => b.MaChuongNavigation)
-                .FirstOrDefaultAsync(b => b.MaBaiHoc == lessonId);
-
-            if (lesson == null)
-                return NotFound(new { message = "Không tìm thấy bài học." });
-
-            var courseId = lesson.MaChuongNavigation?.MaKhoaHoc;
-
-            // Tìm tiến độ
-            var tienDo = await _context.TienDos
-                .Include(t => t.TienDoBaiHocs)
-                .FirstOrDefaultAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == courseId);
-
-            if (tienDo == null)
-                return BadRequest(new { message = "Bạn chưa đăng ký khóa học này." });
-
-            // Kiểm tra đã hoàn thành chưa
-            var existing = tienDo.TienDoBaiHocs.FirstOrDefault(tb => tb.MaBaiHoc == lessonId);
-            if (existing != null)
+            try
             {
-                existing.DaHoanThanh = true;
-                existing.LanCuoiXem = DateTime.Now;
-            }
-            else
-            {
-                _context.TienDoBaiHocs.Add(new TienDoBaiHoc
+                var userId = GetUserIdFromToken();
+                if (userId == null)
+                    return Unauthorized(new { message = "Token không hợp lệ." });
+
+                // Tìm bài học
+                var lesson = await _context.BaiHocs
+                    .Include(b => b.MaChuongNavigation)
+                    .FirstOrDefaultAsync(b => b.MaBaiHoc == lessonId);
+
+                if (lesson == null)
+                    return NotFound(new { message = "Không tìm thấy bài học." });
+
+                var courseId = lesson.MaChuongNavigation?.MaKhoaHoc;
+
+                // Tìm tiến độ
+                var tienDo = await _context.TienDos
+                    .Include(t => t.TienDoBaiHocs)
+                    .FirstOrDefaultAsync(t => t.MaNguoiDung == userId.Value && t.MaKhoaHoc == courseId);
+
+                if (tienDo == null)
+                    return BadRequest(new { message = "Bạn chưa đăng ký khóa học này." });
+
+                // Kiểm tra đã hoàn thành chưa
+                var existing = tienDo.TienDoBaiHocs.FirstOrDefault(tb => tb.MaBaiHoc == lessonId);
+                if (existing != null)
                 {
-                    MaTienDo = tienDo.MaTienDo,
-                    MaBaiHoc = lessonId,
-                    DaHoanThanh = true,
-                    LanCuoiXem = DateTime.Now
-                });
-            }
-
-            // Tính lại phần trăm tiến độ
-            var totalLessons = await _context.BaiHocs
-                .CountAsync(b => b.MaChuongNavigation != null && b.MaChuongNavigation.MaKhoaHoc == courseId);
-
-            var completedLessons = tienDo.TienDoBaiHocs.Count(tb => tb.DaHoanThanh == true);
-            if (existing == null || existing.DaHoanThanh != true)
-                completedLessons += 1; // Vừa hoàn thành thêm 1
-
-            tienDo.PhanTramTienDo = totalLessons > 0 ? Math.Round((double)completedLessons / totalLessons * 100, 1) : 0;
-
-            // Nếu hoàn thành 100% → cấp chứng chỉ
-            if (tienDo.PhanTramTienDo >= 100)
-            {
-                tienDo.TinhTrang = true; // Hoàn thành
-
-                var hasCert = await _context.ChungChis
-                    .AnyAsync(c => c.MaNguoiDung == userId.Value && c.MaKhoaHoc == courseId);
-
-                if (!hasCert)
-                {
-                    _context.ChungChis.Add(new ChungChi
+                    if (existing.DaHoanThanh == true)
                     {
-                        MaNguoiDung = userId.Value,
-                        MaKhoaHoc = courseId,
-                        NgayPhat = DateTime.Now
+                        // Đã hoàn thành rồi, không cần tính lại
+                        return Ok(new
+                        {
+                            message = "Bài học này đã hoàn thành.",
+                            phanTramTienDo = tienDo.PhanTramTienDo
+                        });
+                    }
+
+                    existing.DaHoanThanh = true;
+                    existing.LanCuoiXem = DateTime.Now;
+                }
+                else
+                {
+                    _context.TienDoBaiHocs.Add(new TienDoBaiHoc
+                    {
+                        MaTienDo = tienDo.MaTienDo,
+                        MaBaiHoc = lessonId,
+                        DaHoanThanh = true,
+                        LanCuoiXem = DateTime.Now
                     });
                 }
+
+                // Tính lại phần trăm tiến độ
+                var totalLessons = await _context.BaiHocs
+                    .CountAsync(b => b.MaChuongNavigation != null && b.MaChuongNavigation.MaKhoaHoc == courseId);
+
+                var completedLessons = tienDo.TienDoBaiHocs.Count(tb => tb.DaHoanThanh == true);
+                if (existing == null || existing.DaHoanThanh != true)
+                    completedLessons += 1; // Vừa hoàn thành thêm 1
+
+                tienDo.PhanTramTienDo = totalLessons > 0 ? Math.Round((double)completedLessons / totalLessons * 100, 1) : 0;
+                
+                // Đảm bảo phần trăm không bao giờ vượt quá 100 (phòng tránh vi phạm CHECK constraint trong CSDL)
+                if (tienDo.PhanTramTienDo > 100)
+                {
+                    tienDo.PhanTramTienDo = 100;
+                }
+
+                // Nếu hoàn thành 100% → cấp chứng chỉ
+                if (tienDo.PhanTramTienDo >= 100)
+                {
+                    tienDo.TinhTrang = true; // Hoàn thành
+
+                    var hasCert = await _context.ChungChis
+                        .AnyAsync(c => c.MaNguoiDung == userId.Value && c.MaKhoaHoc == courseId);
+
+                    if (!hasCert)
+                    {
+                        _context.ChungChis.Add(new ChungChi
+                        {
+                            MaNguoiDung = userId.Value,
+                            MaKhoaHoc = courseId,
+                            NgayPhat = DateTime.Now
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Đã hoàn thành bài học!",
+                    phanTramTienDo = tienDo.PhanTramTienDo
+                });
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            catch (Exception ex)
             {
-                message = "Đã hoàn thành bài học!",
-                phanTramTienDo = tienDo.PhanTramTienDo
-            });
+                var innerMsg = ex.InnerException != null ? ex.InnerException.Message : "";
+                return StatusCode(500, new { message = "Lỗi server: " + ex.Message + " | Chi tiết: " + innerMsg });
+            }
         }
 
         // ④ GET /api/learning/certificates — Chứng chỉ đã nhận

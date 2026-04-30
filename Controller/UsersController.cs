@@ -13,10 +13,14 @@ namespace online_course_recommendation_system.Controllers
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env;
+        private readonly online_course_recommendation_system.Service.ICloudinaryService _cloudinaryService;
 
-        public UsersController(AppDbContext context)
+        public UsersController(AppDbContext context, Microsoft.AspNetCore.Hosting.IWebHostEnvironment env, online_course_recommendation_system.Service.ICloudinaryService cloudinaryService)
         {
             _context = context;
+            _env = env;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet("ping")]
@@ -119,6 +123,34 @@ namespace online_course_recommendation_system.Controllers
             return Ok(new { message = "Cập nhật profile thành công!", data = MapToProfileDto(user) });
         }
 
+        // ②.1 POST /api/users/profile/degree — Up hồ sơ bằng cấp (Giảng viên)
+        [Authorize]
+        [HttpPost("profile/degree")]
+        public async Task<IActionResult> UploadDegree(Microsoft.AspNetCore.Http.IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "Vui lòng chọn file hợp lệ." });
+
+            var userId = GetUserIdFromToken();
+            if (userId == null) return Unauthorized(new { message = "Token không hợp lệ." });
+
+            var user = await _context.NguoiDungs.FindAsync(userId.Value);
+            if (user == null) return NotFound(new { message = "Không tìm thấy tài khoản." });
+
+            var uploadFolder = "documents";
+            var url = await _cloudinaryService.UploadFileAsync(file, uploadFolder);
+
+            if (string.IsNullOrEmpty(url))
+            {
+                return BadRequest(new { message = "Lỗi khi tải lên Cloudinary." });
+            }
+
+            user.HoSoBangCap = url;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tải lên hồ sơ thành công! Vui lòng chờ Admin duyệt tài khoản.", linkHoSo = user.HoSoBangCap });
+        }
+
         // ②.5 DELETE /api/users/profile — Vô hiệu hóa tài khoản thân (chuyển sang "Bị khóa")
         [Authorize]
         [HttpDelete("profile")]
@@ -196,7 +228,8 @@ namespace online_course_recommendation_system.Controllers
                     LinkAnhDaiDien = u.LinkAnhDaiDien,
                     TieuSu = u.TieuSu,
                     TinhTrang = u.TinhTrang,
-                    NgayTao = u.NgayTao
+                    NgayTao = u.NgayTao,
+                    HoSoBangCap = u.HoSoBangCap
                 })
                 .ToListAsync();
 
@@ -211,6 +244,30 @@ namespace online_course_recommendation_system.Controllers
         }
 
         [Authorize(Roles = "Admin")]
+        [HttpPost("admin")]
+        public async Task<IActionResult> CreateAdmin([FromBody] RegisterDto request)
+        {
+            if (await _context.NguoiDungs.AnyAsync(u => u.Email == request.Email))
+                return BadRequest(new { message = "Email này đã được sử dụng!" });
+
+            // Hàm băm mật khẩu nội bộ dùng tạm SHA256 (nên dùng BCrypt trong thực tế)
+            var user = new online_course_recommendation_system.Models.NguoiDung
+            {
+                Ten = request.Ten,
+                Email = request.Email,
+                MatKhau = HashPassword(request.MatKhau),
+                VaiTro = "Admin",
+                TinhTrang = "Hoạt động",
+                NgayTao = DateTime.Now
+            };
+
+            _context.NguoiDungs.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tạo quản trị viên thành công!", data = MapToProfileDto(user) });
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpGet("stats")]
         public async Task<IActionResult> GetAdminStats()
         {
@@ -219,12 +276,16 @@ namespace online_course_recommendation_system.Controllers
             var instructors = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "GiaoVien");
             var admins = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "Admin");
 
+            var totalRevenueRaw = await _context.ChiTietHoaDons.SumAsync(ct => ct.Gia ?? 0);
+            var adminRevenue = totalRevenueRaw * 0.3m;
+
             return Ok(new
             {
                 totalUsers,
                 students,
                 instructors,
-                admins
+                admins,
+                adminRevenue
             });
         }
 
@@ -357,6 +418,16 @@ namespace online_course_recommendation_system.Controllers
         // HÀM HỖ TRỢ
         // ==========================================
 
+        private string HashPassword(string password)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(password);
+                var hash = sha256.ComputeHash(bytes);
+                return Convert.ToBase64String(hash);
+            }
+        }
+
         private int? GetUserIdFromToken()
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
@@ -376,7 +447,8 @@ namespace online_course_recommendation_system.Controllers
                 LinkAnhDaiDien = user.LinkAnhDaiDien,
                 TieuSu = user.TieuSu,
                 TinhTrang = user.TinhTrang,
-                NgayTao = user.NgayTao
+                NgayTao = user.NgayTao,
+                HoSoBangCap = user.HoSoBangCap
             };
         }
     }
