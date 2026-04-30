@@ -72,6 +72,8 @@ namespace online_course_recommendation_system.Controllers
                     k.AnhUrl,
                     k.TinhTrang,
                     k.KiNang,
+                    k.ThoiGianHocDuKien,
+                    k.ThoiGianChoPhepTre,
                     k.NgayTao,
                     k.NgayCapNhat,
                     TheLoai = k.MaTheLoaiNavigation == null ? null : new
@@ -128,6 +130,8 @@ namespace online_course_recommendation_system.Controllers
                     k.AnhUrl,
                     k.TinhTrang,
                     k.KiNang,
+                    k.ThoiGianHocDuKien,
+                    k.ThoiGianChoPhepTre,
                     k.NgayTao,
                     k.NgayCapNhat,
                     TheLoai = k.MaTheLoaiNavigation == null ? null : new
@@ -312,6 +316,7 @@ namespace online_course_recommendation_system.Controllers
                     k.TbdanhGia,
                     k.AnhUrl,
                     k.TinhTrang,
+                    k.ThoiGianChoPhepTre,
                     k.NgayTao,
                     TheLoai = k.MaTheLoaiNavigation == null ? null : new
                     {
@@ -348,6 +353,10 @@ namespace online_course_recommendation_system.Controllers
                 return NotFound(new { message = "Không tìm thấy khóa học." });
 
             course.TinhTrang = request.TinhTrang;
+            if (request.ThoiGianChoPhepTre.HasValue)
+            {
+                course.ThoiGianChoPhepTre = request.ThoiGianChoPhepTre.Value;
+            }
             course.NgayCapNhat = DateTime.Now;
             await _context.SaveChangesAsync();
 
@@ -379,5 +388,6 @@ namespace online_course_recommendation_system.Controllers
     public class CourseStatusRequest
     {
         public string TinhTrang { get; set; } = string.Empty;
+        public int? ThoiGianChoPhepTre { get; set; }
     }
 }

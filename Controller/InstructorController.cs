@@ -104,7 +104,8 @@ namespace online_course_recommendation_system.Controllers
                     },
                     t.PhanTramTienDo,
                     TinhTrang = t.TinhTrang == true ? "Đang học" : "Chưa bắt đầu",
-                    t.NgayThamGia
+                    t.NgayThamGia,
+                    t.NgayKetThuc
                 })
                 .ToListAsync();
 
@@ -264,6 +265,8 @@ namespace online_course_recommendation_system.Controllers
             course.GiaGoc = request.GiaGoc;
             course.MaTheLoai = request.MaTheLoai;
             course.KiNang = request.KiNang;
+            course.ThoiGianHocDuKien = request.ThoiGianHocDuKien;
+            course.ThoiGianChoPhepTre = request.ThoiGianChoPhepTre;
             if (!string.IsNullOrEmpty(request.TinhTrang))
             {
                 // Chỉ cho phép admin hoặc logic khác ngoài instructor controller này (hoặc nếu ta muốn cho phép ở đây)
@@ -275,9 +278,14 @@ namespace online_course_recommendation_system.Controllers
             }
             course.NgayCapNhat = DateTime.Now;
 
-                await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Cập nhật khóa học thành công." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error: {ex.Message}" });
+            }
         }
 
         // ⑤.1 POST /api/instructor/courses/{id}/submit — Gửi khóa học duyệt
@@ -555,6 +563,8 @@ namespace online_course_recommendation_system.Controllers
         public decimal? GiaGoc { get; set; }
         public int? MaTheLoai { get; set; }
         public string? KiNang { get; set; }
+        public int? ThoiGianHocDuKien { get; set; }
+        public int? ThoiGianChoPhepTre { get; set; }
     }
 
     public class UpdateCourseRequest : CreateCourseRequest
