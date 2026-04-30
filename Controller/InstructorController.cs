@@ -101,7 +101,8 @@ namespace online_course_recommendation_system.Controllers
                     },
                     t.PhanTramTienDo,
                     TinhTrang = t.TinhTrang == true ? "Đang học" : "Chưa bắt đầu",
-                    t.NgayThamGia
+                    t.NgayThamGia,
+                    t.NgayKetThuc
                 })
                 .ToListAsync();
 
@@ -167,6 +168,8 @@ namespace online_course_recommendation_system.Controllers
                 GiaGoc = request.GiaGoc,
                 MaTheLoai = request.MaTheLoai,
                 KiNang = request.KiNang,
+                ThoiGianHocDuKien = request.ThoiGianHocDuKien,
+                ThoiGianChoPhepTre = request.ThoiGianChoPhepTre,
                 NgayTao = DateTime.Now,
                 NgayCapNhat = DateTime.Now,
                 TinhTrang = "Draft", // Mặc định là Nháp
@@ -209,6 +212,8 @@ namespace online_course_recommendation_system.Controllers
             course.GiaGoc = request.GiaGoc;
             course.MaTheLoai = request.MaTheLoai;
             course.KiNang = request.KiNang;
+            course.ThoiGianHocDuKien = request.ThoiGianHocDuKien;
+            course.ThoiGianChoPhepTre = request.ThoiGianChoPhepTre;
             if (!string.IsNullOrEmpty(request.TinhTrang))
             {
                 // Chỉ cho phép admin hoặc logic khác ngoài instructor controller này (hoặc nếu ta muốn cho phép ở đây)
@@ -433,6 +438,8 @@ namespace online_course_recommendation_system.Controllers
         public decimal? GiaGoc { get; set; }
         public int? MaTheLoai { get; set; }
         public string? KiNang { get; set; }
+        public int? ThoiGianHocDuKien { get; set; }
+        public int? ThoiGianChoPhepTre { get; set; }
     }
 
     public class UpdateCourseRequest : CreateCourseRequest

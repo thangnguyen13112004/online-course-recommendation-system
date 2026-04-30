@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace online_course_recommendation_system.Models;
@@ -30,6 +30,10 @@ public partial class KhoaHoc
     public string? AnhUrl { get; set; }
 
     public int? MaKhuyenMai { get; set; }
+
+    public int? ThoiGianHocDuKien { get; set; } // Tính bằng ngày
+
+    public int? ThoiGianChoPhepTre { get; set; } // Tính bằng ngày
 
     public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; } = new List<ChiTietGioHang>();
 

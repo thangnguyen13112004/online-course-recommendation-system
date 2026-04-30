@@ -50,6 +50,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<VwKhoaHocGiaThucTe> VwKhoaHocGiaThucTes { get; set; }
 
+    public virtual DbSet<ThongBao> ThongBaos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<BaiHoc>(entity =>
@@ -314,6 +316,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.NgayThamGia)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.NgayKetThuc).HasColumnType("datetime");
             entity.Property(e => e.PhanTramTienDo).HasDefaultValue(0.0);
 
             entity.HasOne(d => d.MaKhoaHocNavigation).WithMany(p => p.TienDos)
@@ -323,6 +326,23 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.TienDos)
                 .HasForeignKey(d => d.MaNguoiDung)
                 .HasConstraintName("FK__TienDo__MaNguoiD__7A672E12");
+        });
+
+        modelBuilder.Entity<ThongBao>(entity =>
+        {
+            entity.HasKey(e => e.MaThongBao).HasName("PK_ThongBao");
+
+            entity.ToTable("ThongBao");
+
+            entity.Property(e => e.TieuDe).HasMaxLength(255);
+            entity.Property(e => e.NgayTao)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.DaDoc).HasDefaultValue(false);
+
+            entity.HasOne(d => d.MaNguoiDungNavigation).WithMany(p => p.ThongBaos)
+                .HasForeignKey(d => d.MaNguoiDung)
+                .HasConstraintName("FK_ThongBao_NguoiDung");
         });
 
         modelBuilder.Entity<TienDoBaiHoc>(entity =>
