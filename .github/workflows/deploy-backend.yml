@@ -28,7 +28,7 @@ jobs:
         context: .
         push: true
         # THAY TÊN TÀI KHOẢN DOCKER CỦA BẠN VÀO ĐÂY:
-        tags: duyhieu2004/my-backend:latest
+        tags: thang1311/my-backend:latest
 
     - name: Build and Push Embedding Service Image
       uses: docker/build-push-action@v5
